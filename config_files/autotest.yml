@@ -1,0 +1,14 @@
+# my global config
+global:
+  worker_num: 10
+  # ignore errors
+  ignore_errors: true
+  
+http_rule_files:
+  - "my_http_api.yml"
+
+grpc_rule_files:
+#  - "my_grpc_api.yml"
+
+  
+  

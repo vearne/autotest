@@ -1,0 +1,12 @@
+- id: 1
+  request:
+    url: "http://{{ HOST }}"/api/books
+    headers:
+      - "Content-Type: application/json"
+#    body: ""
+  rules:
+    - name: "HttpStatusEqualRule"
+      expectedStatus: 200
+    - name: "HttpBodyEqualRule"
+      xpath: "//title"
+      value: "Effective Go"
