@@ -90,7 +90,3 @@ func TestXpathFindOne2(t *testing.T) {
 		assert.Equal(t, convStr(item.expected), convStr(node.Value()))
 	}
 }
-
-func convStr(v any) string {
-	return fmt.Sprintf("%v", v)
-}
