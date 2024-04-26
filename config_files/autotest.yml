@@ -1,8 +1,15 @@
 # my global config
 global:
-  worker_num: 10
-  # ignore errors
-  ignore_errors: true
+  worker_num: 5
+  # default: true
+  ignore_testcase_fail: true
+  
+  logger:
+    # 1. "info"
+    # 2. "debug"
+    # 3. "error"
+    level: "debug"
+    filepath: "/var/log/test/autotest.log"
   
 http_rule_files:
   - "my_http_api.yml"
