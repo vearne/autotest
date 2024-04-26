@@ -26,16 +26,21 @@ func main() {
 		Copyright: "2024 vearne",
 		Commands: []*cli.Command{
 			{
-				Name:    "test",
-				Aliases: []string{"t"},
-				Usage:   "validate configuration files",
-				Action:  command.RunTestCases,
+				Name: "test",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "config-file", Aliases: []string{"c"}},
+				},
+				Usage:  "validate configuration files",
+				Action: command.RunTestCases,
 			},
 			{
-				Name:    "run",
-				Aliases: []string{"r"},
-				Usage:   "run all test cases",
-				Action:  command.ValidateConfig,
+				Name: "run",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "config-file", Aliases: []string{"c"}},
+					&cli.StringFlag{Name: "env-file", Aliases: []string{"e"}},
+				},
+				Usage:  "run all test cases",
+				Action: command.ValidateConfig,
 			},
 		},
 	}
