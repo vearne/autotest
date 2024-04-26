@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-const json1 = `[
+const jsonStr1 = `[
   {
     "id": 1,
     "title": "The Go Programming Language",
@@ -22,7 +22,7 @@ const json1 = `[
     "author": "The Go Authors"
   }
 ]`
-const json2 = `
+const jsonStr2 = `
 {
 	"person": {
 		"name": "John",
@@ -46,7 +46,7 @@ func TestXpathFind(t *testing.T) {
 		{"//id", 2},
 	}
 	for _, item := range cases {
-		doc, _ := jsonquery.Parse(strings.NewReader(json1))
+		doc, _ := jsonquery.Parse(strings.NewReader(jsonStr1))
 		nodes := jsonquery.Find(doc, item.xpath)
 		exist := false
 		for _, node := range nodes {
@@ -68,7 +68,7 @@ func TestXpathFindOne(t *testing.T) {
 		{"(//id)[1]", 1},
 	}
 	for _, item := range cases {
-		doc, _ := jsonquery.Parse(strings.NewReader(json1))
+		doc, _ := jsonquery.Parse(strings.NewReader(jsonStr1))
 		node := jsonquery.FindOne(doc, item.xpath)
 		assert.Equal(t, convStr(item.expected), convStr(node.Value()))
 	}
@@ -85,8 +85,25 @@ func TestXpathFindOne2(t *testing.T) {
 		{"/person/hobbies", []string{"coding", "eating", "football"}},
 	}
 	for _, item := range cases {
-		doc, _ := jsonquery.Parse(strings.NewReader(json2))
+		doc, _ := jsonquery.Parse(strings.NewReader(jsonStr2))
 		node := jsonquery.FindOne(doc, item.xpath)
 		assert.Equal(t, convStr(item.expected), convStr(node.Value()))
+	}
+}
+
+func TestConvStr(t *testing.T) {
+	cases := []struct {
+		v        any
+		expected string
+	}{
+		// Notice: the first element is 1, not zero
+		{15, "15"},
+		{"hello", "hello"},
+		{[]int{1, 2, 3}, "[1 2 3]"},
+		{[]string{"1", "2", "3"}, "[1 2 3]"},
+		{[]string{"hello", "world"}, "[hello world]"},
+	}
+	for _, item := range cases {
+		assert.Equal(t, item.expected, convStr(item.v))
 	}
 }
