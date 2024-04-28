@@ -1,6 +1,8 @@
-package autotest
+package config
 
-import "github.com/vearne/autotest/internal/rule"
+import (
+	"github.com/vearne/autotest/internal/rule"
+)
 
 type AutoTestConfig struct {
 	Global struct {
@@ -17,11 +19,12 @@ type AutoTestConfig struct {
 }
 
 type TestCase struct {
-	ID          uint64            `yaml:"id"`
-	Request     Request           `yaml:"request"`
-	Rules       []rule.VerifyRule `yaml:"rules"`
-	DependOnIDs []uint64          `yaml:"dependOnIDs,omitempty"`
-	Export      Export            `yaml:"export"`
+	ID          uint64           `yaml:"id"`
+	Request     Request          `yaml:"request"`
+	OriginRules []map[string]any `yaml:"rules"`
+	DependOnIDs []uint64         `yaml:"dependOnIDs,omitempty"`
+	Export      Export           `yaml:"export"`
+	VerifyRules []rule.VerifyRule
 }
 
 type Export struct {

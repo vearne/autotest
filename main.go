@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/urfave/cli/v3"
 	"github.com/vearne/autotest/internal/command"
+	slog "github.com/vearne/simplelog"
 	"log"
 	"os"
 )
@@ -14,6 +15,8 @@ const (
 )
 
 func main() {
+	slog.SetLevel(slog.DebugLevel)
+
 	cli.VersionPrinter = func(cmd *cli.Command) {
 		fmt.Printf("version=%s\n", cmd.Root().Version)
 	}
@@ -31,7 +34,7 @@ func main() {
 					&cli.StringFlag{Name: "config-file", Aliases: []string{"c"}},
 				},
 				Usage:  "validate configuration files",
-				Action: command.RunTestCases,
+				Action: command.ValidateConfig,
 			},
 			{
 				Name: "run",
@@ -40,7 +43,7 @@ func main() {
 					&cli.StringFlag{Name: "env-file", Aliases: []string{"e"}},
 				},
 				Usage:  "run all test cases",
-				Action: command.ValidateConfig,
+				Action: command.RunTestCases,
 			},
 		},
 	}

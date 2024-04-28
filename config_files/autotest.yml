@@ -1,6 +1,7 @@
 # my global config
 global:
-  worker_num: 5
+#  worker_num: 5
+  worker_num: 1
   # default: true
   ignore_testcase_fail: true
   
@@ -12,7 +13,7 @@ global:
     filepath: "/var/log/test/autotest.log"
   
 http_rule_files:
-  - "my_http_api.yml"
+  - "./config_files/my_http_api.yml"
 
 grpc_rule_files:
 #  - "my_grpc_api.yml"
