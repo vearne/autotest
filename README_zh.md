@@ -20,4 +20,12 @@ autotest --config-file=${CONFIG_FILE}
 autotest --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 ```
 
+## 示例
+### 1) 启动一个api服务
+
+### 2）运行自动化测试用例
+```
+make build
+./autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+```
 

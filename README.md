@@ -21,4 +21,11 @@ autotest --config-file=${CONFIG_FILE}
 ``` 
 autotest --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 ```
+## Example
+### 1) start a fake api service
 
+### 2）run automated test cases
+```
+make build
+./autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+```
