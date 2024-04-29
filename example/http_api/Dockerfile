@@ -1,7 +1,7 @@
 # build
 FROM golang:1.21 as builder
-ADD . /data/
-WORKDIR /data
+ADD . /tmp/
+WORKDIR /tmp
 
 RUN go build -o /bin/httpapi -ldflags "-s -w" ./main.go
 
