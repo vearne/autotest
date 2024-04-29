@@ -4,12 +4,13 @@ global:
   worker_num: 1
   # default: true
   ignore_testcase_fail: true
+  debug: false
   
   logger:
     # 1. "info"
     # 2. "debug"
     # 3. "error"
-    level: "debug"
+    level: "info"
     filepath: "/var/log/test/autotest.log"
   
 http_rule_files:

@@ -31,10 +31,11 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 		slog.Error("env file parse error, %v", err)
 		return err
 	}
-	// 2. 初始化logger
-	slog.Info("2. Initialize logger")
+	// 2. 初始化logger & RestyClient
+	slog.Info("2. Initialize logger&RestyClient")
 	loggerConfig := resource.GlobalConfig.Global.Logger
 	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
+	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
 
 	// 3. 初始化执行器, 并发执行testcase (执行失败可能需要解释失败的原因)
 	slog.Info("3. Execute test cases")

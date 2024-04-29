@@ -15,7 +15,7 @@ const (
 )
 
 func main() {
-	slog.SetLevel(slog.DebugLevel)
+	slog.SetLevel(slog.InfoLevel)
 
 	cli.VersionPrinter = func(cmd *cli.Command) {
 		fmt.Printf("version=%s\n", cmd.Root().Version)

@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"fmt"
 	"github.com/antchfx/jsonquery"
 	"github.com/go-resty/resty/v2"
 	"strings"
@@ -15,7 +16,7 @@ func (r *HttpStatusEqualRule) Name() string {
 	return "HttpStatusEqualRule"
 }
 
-func (r *HttpStatusEqualRule) Valid(resp *resty.Response) bool {
+func (r *HttpStatusEqualRule) Verify(resp *resty.Response) bool {
 	return resp.StatusCode() == r.ExpectedStatus
 }
 
@@ -29,7 +30,7 @@ func (r *HttpBodyEqualRule) Name() string {
 	return "HttpBodyEqualRule"
 }
 
-func (r *HttpBodyEqualRule) Valid(resp *resty.Response) bool {
+func (r *HttpBodyEqualRule) Verify(resp *resty.Response) bool {
 	doc, err := jsonquery.Parse(strings.NewReader(resp.String()))
 	if err != nil {
 		return false
@@ -49,7 +50,7 @@ func (r *HttpBodyAtLeastOneRule) Name() string {
 	return "HttpBodyAtLeastOneRule"
 }
 
-func (r *HttpBodyAtLeastOneRule) Valid(resp *resty.Response) bool {
+func (r *HttpBodyAtLeastOneRule) Verify(resp *resty.Response) bool {
 	doc, err := jsonquery.Parse(strings.NewReader(resp.String()))
 	if err != nil {
 		return false
@@ -57,6 +58,7 @@ func (r *HttpBodyAtLeastOneRule) Valid(resp *resty.Response) bool {
 	nodes := jsonquery.Find(doc, r.Xpath)
 	for _, node := range nodes {
 		if node != nil && convStr(r.Expected) == convStr(node.Value()) {
+			fmt.Printf("xpath:%v, value:%v\n", r.Xpath, node.Value())
 			return true
 		}
 	}

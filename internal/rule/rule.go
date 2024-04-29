@@ -7,7 +7,7 @@ import (
 
 type VerifyRule interface {
 	Name() string
-	Valid(response *resty.Response) bool
+	Verify(response *resty.Response) bool
 }
 
 func convStr(v any) string {

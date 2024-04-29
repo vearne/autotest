@@ -8,6 +8,7 @@ type AutoTestConfig struct {
 	Global struct {
 		WorkerNum          int  `yaml:"worker_num"`
 		IgnoreTestCaseFail bool `yaml:"ignore_testcase_fail"`
+		Debug              bool `yaml:"debug"`
 		Logger             struct {
 			Level    string `yaml:"level"`
 			FilePath string `yaml:"filepath"`
@@ -21,15 +22,16 @@ type AutoTestConfig struct {
 type TestCase struct {
 	ID          uint64           `yaml:"id"`
 	Request     Request          `yaml:"request"`
-	OriginRules []map[string]any `yaml:"rules"`
+	OriginRules []map[string]any `yaml:"rules" json:"-"`
 	DependOnIDs []uint64         `yaml:"dependOnIDs,omitempty"`
-	Export      Export           `yaml:"export"`
+	Export      *Export          `yaml:"export"`
 	VerifyRules []rule.VerifyRule
 }
 
 type Export struct {
 	Xpath    string `yaml:"xpath"`
 	ExportTo string `yaml:"exportTo"`
+	Type     string `yaml:"type"`
 }
 
 type Request struct {

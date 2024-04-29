@@ -3,11 +3,12 @@ package resource
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
+	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/rule"
 	slog "github.com/vearne/simplelog"
 	"gopkg.in/yaml.v3"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,14 +16,26 @@ import (
 )
 
 var GlobalConfig config.AutoTestConfig
-var HttpTestCases map[string][]config.TestCase
+var HttpTestCases map[string][]*config.TestCase
 
 var EnvVars map[string]string
 var CustomerVars sync.Map
 
+var RestyClient *resty.Client
+
 func init() {
 	EnvVars = make(map[string]string, 10)
-	HttpTestCases = make(map[string][]config.TestCase, 10)
+	HttpTestCases = make(map[string][]*config.TestCase, 10)
+}
+
+func InitRestyClient(debug bool) {
+	httpClient := http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: 500,
+		},
+	}
+	RestyClient = resty.NewWithClient(&httpClient)
+	RestyClient.SetDebug(debug)
 }
 
 func ParseConfigFile(filePath string) error {
@@ -42,7 +55,7 @@ func ParseConfigFile(filePath string) error {
 	slog.Info("2) parse http rule files")
 	// read testcase
 	// 1) http testcase
-	for _, f := range GlobalConfig.HttpRuleFiles {
+	for idx, f := range GlobalConfig.HttpRuleFiles {
 		slog.Info("parse file:%v", f)
 
 		b, err := readFile(f)
@@ -51,45 +64,51 @@ func ParseConfigFile(filePath string) error {
 			return err
 		}
 
-		var testcases []config.TestCase
+		var testcases []*config.TestCase
 		err = yaml.Unmarshal(b, &testcases)
 		if err != nil {
-			fmt.Println(err)
 			slog.Error("file:%v parse error, %v", f, err)
 			return err
 		}
 
 		for i := 0; i < len(testcases); i++ {
 			c := testcases[i]
+			c.Request.Body = strings.ReplaceAll(c.Request.Body, "\n", "")
 			c.VerifyRules = make([]rule.VerifyRule, 0)
 			for _, r := range c.OriginRules {
 				b, _ := json.Marshal(r)
 				switch r["name"] {
 				case "HttpStatusEqualRule":
-					var r rule.HttpStatusEqualRule
-					err = json.Unmarshal(b, &r)
+					var item rule.HttpStatusEqualRule
+					err = json.Unmarshal(b, &item)
 					if err != nil {
 						slog.Error("parse rule[HttpStatusEqualRule], %v", err)
 						return err
 					}
-					c.VerifyRules = append(c.VerifyRules, &r)
+					c.VerifyRules = append(c.VerifyRules, &item)
 				case "HttpBodyEqualRule":
-					var r rule.HttpBodyEqualRule
-					err = json.Unmarshal(b, &r)
+					var item rule.HttpBodyEqualRule
+					err = json.Unmarshal(b, &item)
 					if err != nil {
 						slog.Error("parse rule[HttpBodyEqualRule], %v", err)
 						return err
 					}
-					c.VerifyRules = append(c.VerifyRules, &r)
+					c.VerifyRules = append(c.VerifyRules, &item)
 
 				case "HttpBodyAtLeastOneRule":
-					var r rule.HttpBodyAtLeastOneRule
-					err = json.Unmarshal(b, &r)
+					var item rule.HttpBodyAtLeastOneRule
+					err = json.Unmarshal(b, &item)
 					if err != nil {
 						slog.Error("parse rule[HttpBodyAtLeastOneRule], %v", err)
 						return err
 					}
-					c.VerifyRules = append(c.VerifyRules, &r)
+					c.VerifyRules = append(c.VerifyRules, &item)
+				}
+			}
+
+			if c.Export != nil {
+				if len(c.Export.Type) <= 0 {
+					c.Export.Type = "string"
 				}
 			}
 		}
@@ -97,6 +116,7 @@ func ParseConfigFile(filePath string) error {
 		slog.Info("parse file:%v, len(testcases):%v", f, len(testcases))
 		absolutePath, _ := filepath.Abs(f)
 		HttpTestCases[absolutePath] = testcases
+		GlobalConfig.HttpRuleFiles[idx] = absolutePath
 	}
 
 	slog.Info("3) parse grpc rule files")

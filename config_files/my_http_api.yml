@@ -3,8 +3,6 @@
     # optional
     method: "get"
     url: "http://{{ HOST }}/api/books"
-    headers:
-      - "Content-Type: application/json"
   rules:
     - name: "HttpStatusEqualRule"
       expectedStatus: 200
@@ -34,10 +32,12 @@
     xpath: "/id"
     # Extract the id value and export it to the variable MY_BOOK_ID
     exportTo: "MY_BOOK_ID"
+    # default is string, optional value: integer | string | float
+    type: integer
     
 - id: 3
-  # 依赖 TestCase2
-  # TestCase2 必须先执行
+  # Depends on TestCase2
+  # TestCase2 must be executed first
   dependOnIDs: [2]
   request:
     # optional
@@ -58,3 +58,24 @@
     - name: "HttpBodyEqualRule"
       xpath: "/author"
       Expected: "book3_author-2"
+      
+- id: 4
+  request:
+    # optional
+    method: "delete"
+    # The user-defined variable HOST and the variable MY_BOOK_ID
+    # obtained in TestCase2 are used here.
+    url: "http://{{ HOST }}/api/books/1"
+  rules:
+    - name: "HttpStatusEqualRule"
+      expectedStatus: 204
+
+- id: 5
+  dependOnIDs: [4]
+  request:
+    # optional
+    method: "get"
+    url: "http://{{ HOST }}/api/books/1"
+  rules:
+    - name: "HttpStatusEqualRule"
+      expectedStatus: 404
