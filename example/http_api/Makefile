@@ -1,4 +1,5 @@
-LDFLAGS = -ldflags "-s -w"
+LDFLAGS := -ldflags "-s -w"
+IMAGE := woshiaotian/httpapi:latest
 
 .PHONY: build
 build:
@@ -7,4 +8,4 @@ build:
 .PHONY: image-multiple
 image-multiple:
 	docker buildx build -f ./Dockerfile \
- 		--platform linux/amd64,linux/arm64 --push -t ${IMAGE} .
+		--platform linux/amd64,linux/arm64 --push -t ${IMAGE} .
