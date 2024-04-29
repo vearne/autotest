@@ -22,4 +22,5 @@ go.work
 
 .idea/
 vendor/
+example/http_api/vendor
 autotest
