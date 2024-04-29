@@ -1,9 +1,9 @@
 # build
 FROM golang:1.21 as builder
-ADD ../../ $GOPATH/src/github.com/vearne/autotest
-WORKDIR $GOPATH/src/github.com/vearne/autotest/example/http_api
+ADD . /data/
+WORKDIR /data
 
-RUN go build -o /bin/httpapi -ldflags "-s -w"
+RUN go build -o /bin/httpapi -ldflags "-s -w" ./main.go
 
 
 FROM woshiaotian/simple-base-image:v0.1.6
