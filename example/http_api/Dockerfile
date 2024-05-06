@@ -3,6 +3,7 @@ FROM golang:1.21 as builder
 
 RUN mkdir -p /tmp/http_api
 COPY go.mod /tmp/http_api/go.mod
+COPY go.sum /tmp/http_api/go.sum
 COPY main.go /tmp/http_api/main.go
 
 WORKDIR /tmp/http_api
