@@ -1,0 +1,7 @@
+version: '2'
+
+services:
+  httpapi:
+    image: woshiaotian/httpapi:latest
+    ports:
+      - '8080:8080'

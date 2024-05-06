@@ -1,18 +1,30 @@
-# build
-FROM golang:1.21 as builder
+# 使用更新的 golang 基础镜像
+FROM golang:1.21 AS builder
 
-RUN mkdir -p /tmp/http_api
-COPY go.mod /tmp/http_api/go.mod
-COPY go.sum /tmp/http_api/go.sum
-COPY main.go /tmp/http_api/main.go
+# 设置工作目录
+WORKDIR /app
 
-WORKDIR /tmp/http_api
-RUN go build -o /bin/httpapi -ldflags "-s -w" /tmp/http_api
+# 复制 Go 模块文件和主文件
+COPY go.mod go.sum ./
+COPY main.go .
 
+# 下载依赖
+RUN go mod download
 
-FROM woshiaotian/simple-base-image:v0.1.8
+# 使用 CGO_DISABLED=0 来构建 Go 二进制文件
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o httpapi .
 
-WORKDIR /data
-COPY --from=builder /bin/httpapi /data/httpapi
+# 使用轻量级的 Alpine Linux 基础镜像
+FROM alpine:latest
 
-CMD ["/data/httpapi"]
+# 设置工作目录
+WORKDIR /app
+
+# 从构建阶段将二进制文件复制到最终镜像中
+COPY --from=builder /app/httpapi .
+
+# 暴露应用运行的端口
+EXPOSE 8080
+
+# 运行二进制文件
+CMD ["./httpapi"]
