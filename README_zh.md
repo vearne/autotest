@@ -21,7 +21,33 @@ autotest --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 ```
 
 ## 示例
-### 1) 启动一个api服务
+### 1) 启动一个伪造的http api服务
+```
+cd docker-compose
+docker compose up -d
+```
+#### 添加
+```
+curl -X POST 'http://localhost:8080/api/books' \
+--header 'Content-Type: application/json' \
+--data '{"title": "book3_title", "author": "book3_author"}'
+```
+
+#### 删除
+```
+curl -X DELETE 'http://localhost:8080/api/books/1'
+```
+
+#### 修改
+```
+curl -X PUT 'localhost:8080/api/books/3' \
+--header 'Content-Type: application/json' \
+--data '{"title": "book3_title", "author": "book3_author-2"}'
+```
+#### 列表
+```
+curl  'http://localhost:8080/api/books'
+```
 
 ### 2) 运行自动化测试用例
 ```

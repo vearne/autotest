@@ -22,7 +22,34 @@ autotest --config-file=${CONFIG_FILE}
 autotest --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 ```
 ## Example
-### 1) start a fake api service
+### 1) start a fake http api service
+```
+cd docker-compose
+docker compose up -d
+```
+#### Add
+```
+curl -X POST 'http://localhost:8080/api/books' \
+--header 'Content-Type: application/json' \
+--data '{"title": "book3_title", "author": "book3_author"}'
+```
+
+#### Delete
+```
+curl -X DELETE 'http://localhost:8080/api/books/1'
+```
+
+#### Modify
+```
+curl -X PUT 'localhost:8080/api/books/3' \
+--header 'Content-Type: application/json' \
+--data '{"title": "book3_title", "author": "book3_author-2"}'
+```
+#### List
+```
+curl  'http://localhost:8080/api/books'
+```
+
 
 ### 2) run automated test cases
 ```
