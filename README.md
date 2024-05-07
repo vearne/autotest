@@ -14,13 +14,18 @@ Automated testing framework for api services, http, gRPC (may support in the fut
 ## Usage
 ### 1) check configuration file
 ``` 
-autotest --config-file=${CONFIG_FILE}
+autotest test --config-file=${CONFIG_FILE}
 ```
 
 ### 2) execute automated tests
 ``` 
-autotest --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
+autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 ```
+### 3) extract the value corresponding to xpath
+``` 
+autotest extract --xpath=${XPATH} --json=${JSON}
+```
+
 ## Example
 ### 1) start a fake http api service
 ```
@@ -55,4 +60,21 @@ curl  'http://localhost:8080/api/books'
 ```
 make build
 ./autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+```
+
+### 3) extract the value corresponding to xpath
+get the title of each book in the book list
+```
+./autotest extract -x "//title" -j '[
+ {
+  "id": 2,
+  "title": "Effective Go",
+  "author": "The Go Authors"
+ },
+ {
+  "id": 3,
+  "title": "book3_title",
+  "author": "book3_author-2"
+ }
+]'
 ```

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	version = "v0.0.1"
+	version = "v0.0.2"
 )
 
 func main() {
@@ -44,6 +44,15 @@ func main() {
 				},
 				Usage:  "run all test cases",
 				Action: command.RunTestCases,
+			},
+			{
+				Name: "extract",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "xpath", Aliases: []string{"x"}},
+					&cli.StringFlag{Name: "json", Aliases: []string{"j"}},
+				},
+				Usage:  "try to extract data corresponding to xpath from json string",
+				Action: command.ExtractXpath,
 			},
 		},
 	}

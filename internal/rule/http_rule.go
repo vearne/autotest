@@ -1,7 +1,6 @@
 package rule
 
 import (
-	"fmt"
 	"github.com/antchfx/jsonquery"
 	"github.com/go-resty/resty/v2"
 	"strings"
@@ -58,7 +57,6 @@ func (r *HttpBodyAtLeastOneRule) Verify(resp *resty.Response) bool {
 	nodes := jsonquery.Find(doc, r.Xpath)
 	for _, node := range nodes {
 		if node != nil && convStr(r.Expected) == convStr(node.Value()) {
-			fmt.Printf("xpath:%v, value:%v\n", r.Xpath, node.Value())
 			return true
 		}
 	}
