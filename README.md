@@ -10,6 +10,7 @@ Automated testing framework for api services, http, gRPC (may support in the fut
 * You can specify dependencies between testcases
 * Testcases without dependencies can be executed concurrently and execute faster
 * Use xpath to extract variables for easy writing
+* supports importing variables from files and extracting variables from response
 
 ## Usage
 ### 1) check configuration file
