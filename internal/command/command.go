@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"github.com/antchfx/jsonquery"
 	"github.com/antchfx/xpath"
 	"github.com/urfave/cli/v3"
@@ -10,6 +11,12 @@ import (
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 	"strings"
+)
+
+var (
+	ErrorIDduplicate        = errors.New("testcase's ID duplicate")
+	ErrorDependencyNotExist = errors.New("dependency does not exist")
+	ErrorIDRestrict         = errors.New("the ID of the dependent testcase must be smaller than the ID of the current testcase")
 )
 
 func RunTestCases(ctx context.Context, cmd *cli.Command) error {
@@ -33,16 +40,23 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 		slog.Error("env file parse error, %v", err)
 		return err
 	}
-	// 2. 初始化logger & RestyClient
-	slog.Info("2. Initialize logger&RestyClient")
+	// 2. validate config
+	slog.Info("2. validate config file")
+	err = AllCheck()
+	if err != nil {
+		slog.Error("validate config file, error:%v", err)
+		return err
+	}
+	// 3. initialize logger & RestyClient
+	slog.Info("3. Initialize logger&RestyClient")
 	loggerConfig := resource.GlobalConfig.Global.Logger
 	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
 	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
 
-	// 3. 初始化执行器, 并发执行testcase (执行失败可能需要解释失败的原因)
-	slog.Info("3. Execute test cases")
+	// 4. 初始化执行器, 并发执行testcase (执行失败可能需要解释失败的原因)
+	slog.Info("4. Execute test cases")
 	HttpAutomateTest(resource.HttpTestCases)
-	// 4. 生成报告
+	// 5. 生成报告
 	return nil
 }
 
@@ -59,6 +73,10 @@ func ValidateConfig(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	slog.Info("=== validate config file ===")
+	return AllCheck()
+}
+
+func AllCheck() error {
 	slog.Info("1. check xpath")
 	for filePath, testcases := range resource.HttpTestCases {
 		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
@@ -94,9 +112,32 @@ func ValidateConfig(ctx context.Context, cmd *cli.Command) error {
 			_, ok := exist[tc.ID]
 			if ok {
 				slog.Error("filePath:%v, ID [%v] is duplicate", filePath, tc.ID)
-				break
+				return ErrorIDduplicate
 			}
 			exist[tc.ID] = struct{}{}
+		}
+	}
+	slog.Info("3. check dependencies")
+	for filePath, testcases := range resource.HttpTestCases {
+		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
+		exist := make(map[uint64]struct{})
+		for _, tc := range testcases {
+			exist[tc.ID] = struct{}{}
+		}
+		for _, tc := range testcases {
+			for _, dID := range tc.DependOnIDs {
+				if _, ok := exist[dID]; !ok {
+					slog.Error("For testcase %v, the testcase %v that it depend on does not exist",
+						tc.ID, dID)
+					return ErrorDependencyNotExist
+				}
+				if dID >= tc.ID {
+					slog.Error("The ID of the dependent testcase must be smaller "+
+						"than the ID of the current testcase, testcase:%v, dependent testcase:%v",
+						tc.ID, dID)
+					return ErrorIDRestrict
+				}
+			}
 		}
 	}
 	return nil
