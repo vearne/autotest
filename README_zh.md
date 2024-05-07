@@ -12,12 +12,17 @@
 ## 用法
 ### 1) 检查配置文件
 ``` 
-autotest --config-file=${CONFIG_FILE}
+autotest test --config-file=${CONFIG_FILE}
 ```
 
 ### 2) 执行自动化测试
 ``` 
-autotest --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
+autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
+```
+
+### 3) 提取xpath对应的值
+``` 
+autotest extract --xpath=${XPATH} --json=${JSON}
 ```
 
 ## 示例
@@ -53,5 +58,22 @@ curl  'http://localhost:8080/api/books'
 ```
 make build
 ./autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+```
+
+### 3) 提取xpath对应的值
+获取书本列表中，书的title
+```
+./autotest extract -x "//title" -j '[
+ {
+  "id": 2,
+  "title": "Effective Go",
+  "author": "The Go Authors"
+ },
+ {
+  "id": 3,
+  "title": "book3_title",
+  "author": "book3_author-2"
+ }
+]'
 ```
 
