@@ -12,6 +12,21 @@ Automated testing framework for api services, http, gRPC (may support in the fut
 * Use xpath to extract variables for easy writing
 * supports importing variables from files and extracting variables from response
 
+## Install
+### 1) use the compiled binary file
+[release](https://github.com/vearne/autotest/releases)
+
+Obtain the bin file corresponding to the operating system and CPU architecture from the link above
+### 2) compile by yourself
+```
+make build
+```
+or
+```
+go install github.com/vearne/autotest@latest
+```
+
+
 ## Usage
 ### 1) check configuration file
 ``` 
@@ -59,14 +74,13 @@ curl  'http://localhost:8080/api/books'
 
 ### 2) run automated test cases
 ```
-make build
-./autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
 ```
 
 ### 3) extract the value corresponding to xpath
 get the title of each book in the book list
 ```
-./autotest extract -x "//title" -j '[
+autotest extract -x "//title" -j '[
  {
   "id": 2,
   "title": "Effective Go",

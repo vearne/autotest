@@ -10,6 +10,20 @@
 * 使用xpath提取变量书写方便
 * 支持从文件中导入变量，支持从response中提取变量
 
+## 安装
+### 1) 使用编译好的bin文件
+[release](https://github.com/vearne/autotest/releases)
+
+从上面的链接获取对应操作系统和cpu架构的bin文件
+### 2) 手动编译
+```
+make build
+```
+或
+```
+go install github.com/vearne/autotest@latest
+```
+
 ## 用法
 ### 1) 检查配置文件
 ``` 
@@ -57,14 +71,13 @@ curl  'http://localhost:8080/api/books'
 
 ### 2) 运行自动化测试用例
 ```
-make build
-./autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
 ```
 
 ### 3) 提取xpath对应的值
 获取书本列表中，书的title
 ```
-./autotest extract -x "//title" -j '[
+autotest extract -x "//title" -j '[
  {
   "id": 2,
   "title": "Effective Go",
