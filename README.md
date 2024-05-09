@@ -45,7 +45,7 @@ autotest extract --xpath=${XPATH} --json=${JSON}
 ## Example
 ### 1) start a fake http api service
 ```
-cd docker-compose
+cd ./docker-compose
 docker compose up -d
 ```
 #### Add
