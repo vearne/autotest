@@ -43,7 +43,7 @@ autotest extract --xpath=${XPATH} --json=${JSON}
 ## 示例
 ### 1) 启动一个伪造的http api服务
 ```
-cd docker-compose
+cd ./docker-compose
 docker compose up -d
 ```
 #### 添加

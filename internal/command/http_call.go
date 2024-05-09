@@ -137,16 +137,25 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 
 func render(req config.Request) (config.Request, error) {
 	var err error
+	// url
+	req.URL, err = templateRender(req.URL)
+	if err != nil {
+		return req, err
+	}
+
+	// headers
+	for i := 0; i < len(req.Headers); i++ {
+		req.Headers[i], err = templateRender(req.Headers[i])
+		if err != nil {
+			return req, err
+		}
+	}
+
 	// body
 	req.Body, err = templateRender(req.Body)
 	if err != nil {
 		return req, err
 	}
 
-	// url
-	req.URL, err = templateRender(req.URL)
-	if err != nil {
-		return req, err
-	}
 	return req, nil
 }
