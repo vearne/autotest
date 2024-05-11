@@ -69,7 +69,10 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		return &r
 	}
 
-	in := resource.RestyClient.R()
+	ctx, cancel := context.WithTimeout(context.Background(), resource.GlobalConfig.Global.RequestTimeout)
+	defer cancel()
+	
+	in := resource.RestyClient.R().SetContext(ctx)
 	for _, item := range req.Headers {
 		strList := strings.Split(item, ":")
 		in.SetHeader(strings.TrimSpace(strList[0]), strings.TrimSpace(strList[1]))
