@@ -1,5 +1,7 @@
 # autotest
 
+[![golang-ci](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml/badge.svg)](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml)
+
 * [中文 README](https://github.com/vearne/autotest/blob/master/README_zh.md)
 
 ## Overview

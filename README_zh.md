@@ -1,5 +1,7 @@
 # autotest
 
+[![golang-ci](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml/badge.svg)](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml)
+
 ## 概览
 针对api服务，http、gRPC(暂时不支持)的自动化测试框架
 
