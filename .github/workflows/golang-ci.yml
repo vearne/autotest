@@ -16,12 +16,12 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: golangci/golangci-lint:v1.58.1
+      image: golangci/golangci-lint:v1.56.0
     steps:
       - name: checkout
         uses: actions/checkout@v4
       - name: golangci-lint
-        run: golangci-lint run --modules-download-mode=mod 
+        run: golangci-lint run --modules-download-mode=mod
   
   build:
     runs-on: ubuntu-latest
