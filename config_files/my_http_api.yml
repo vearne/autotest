@@ -75,6 +75,8 @@
 
 - id: 5
   desc: "try to get book1"
+  # Delay for 5 seconds before executing
+  delay: 5s
   dependOnIDs: [4]
   request:
     # optional

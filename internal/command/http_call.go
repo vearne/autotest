@@ -10,6 +10,7 @@ import (
 	"github.com/vearne/zaplog"
 	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 type HttpTestCaseResult struct {
@@ -54,6 +55,11 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 			r.Err = nil
 			return &r
 		}
+	}
+
+	if m.testcase.Delay > 0 {
+		zaplog.Debug("sleep", zap.Any("delay", m.testcase.Delay))
+		time.Sleep(m.testcase.Delay)
 	}
 
 	zaplog.Debug("before render()", zap.Any("request", m.testcase.Request))

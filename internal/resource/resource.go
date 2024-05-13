@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 var GlobalConfig config.AutoTestConfig
@@ -22,10 +23,12 @@ var EnvVars map[string]string
 var CustomerVars sync.Map
 
 var RestyClient *resty.Client
+var TerminationFlag atomic.Bool
 
 func init() {
 	EnvVars = make(map[string]string, 10)
 	HttpTestCases = make(map[string][]*config.TestCase, 10)
+	TerminationFlag.Store(false)
 }
 
 func InitRestyClient(debug bool) {

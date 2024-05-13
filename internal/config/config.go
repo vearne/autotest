@@ -22,8 +22,10 @@ type AutoTestConfig struct {
 }
 
 type TestCase struct {
-	ID          uint64           `yaml:"id"`
-	Desc        string           `yaml:"desc"`
+	ID   uint64 `yaml:"id"`
+	Desc string `yaml:"desc"`
+	// Delay for a while before executing
+	Delay       time.Duration    `yaml:"delay,omitempty"`
 	Request     Request          `yaml:"request"`
 	OriginRules []map[string]any `yaml:"rules" json:"-"`
 	DependOnIDs []uint64         `yaml:"dependOnIDs,omitempty"`
