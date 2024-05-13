@@ -5,7 +5,6 @@ go 1.21.0
 require (
 	github.com/antchfx/jsonquery v1.3.4
 	github.com/antchfx/xpath v1.3.0
-	github.com/emicklei/go-restful/v3 v3.12.0
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/go-resty/resty/v2 v2.12.0
 	github.com/lianggaoqiang/progress v0.0.1
