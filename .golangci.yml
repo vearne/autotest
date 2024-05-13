@@ -13,11 +13,10 @@ linters:
 linters-settings:
   govet:
     enable-all: true
-    check-shadowing: true
     disable:
       - fieldalignment
     
-run:
+issues:
   skip-dirs:
     - scripts
     - test
