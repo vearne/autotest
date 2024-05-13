@@ -10,6 +10,7 @@ import (
 	"github.com/vearne/zaplog"
 	"go.uber.org/zap"
 	"strings"
+	"time"
 )
 
 type HttpTestCaseResult struct {
@@ -56,6 +57,11 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		}
 	}
 
+	if m.testcase.Delay > 0 {
+		zaplog.Debug("sleep", zap.Any("delay", m.testcase.Delay))
+		time.Sleep(m.testcase.Delay)
+	}
+
 	zaplog.Debug("before render()", zap.Any("request", m.testcase.Request))
 	req, err := render(m.testcase.Request)
 	tcResult.Request = req
@@ -69,7 +75,10 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		return &r
 	}
 
-	in := resource.RestyClient.R()
+	ctx, cancel := context.WithTimeout(context.Background(), resource.GlobalConfig.Global.RequestTimeout)
+	defer cancel()
+
+	in := resource.RestyClient.R().SetContext(ctx)
 	for _, item := range req.Headers {
 		strList := strings.Split(item, ":")
 		in.SetHeader(strings.TrimSpace(strList[0]), strings.TrimSpace(strList[1]))

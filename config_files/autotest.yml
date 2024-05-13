@@ -1,10 +1,12 @@
 # my global config
 global:
 #  worker_num: 5
-  worker_num: 1
+  worker_num: 5
   # default: true
   ignore_testcase_fail: true
   debug: false
+  # Timeout setting for each request
+  request_timeout: 5s
   
   logger:
     # 1. "info"

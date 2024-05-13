@@ -2,13 +2,15 @@ package config
 
 import (
 	"github.com/vearne/autotest/internal/rule"
+	"time"
 )
 
 type AutoTestConfig struct {
 	Global struct {
-		WorkerNum          int  `yaml:"worker_num"`
-		IgnoreTestCaseFail bool `yaml:"ignore_testcase_fail"`
-		Debug              bool `yaml:"debug"`
+		WorkerNum          int           `yaml:"worker_num"`
+		IgnoreTestCaseFail bool          `yaml:"ignore_testcase_fail"`
+		Debug              bool          `yaml:"debug"`
+		RequestTimeout     time.Duration `yaml:"request_timeout"`
 		Logger             struct {
 			Level    string `yaml:"level"`
 			FilePath string `yaml:"filepath"`
@@ -20,7 +22,10 @@ type AutoTestConfig struct {
 }
 
 type TestCase struct {
-	ID          uint64           `yaml:"id"`
+	ID   uint64 `yaml:"id"`
+	Desc string `yaml:"desc"`
+	// Delay for a while before executing
+	Delay       time.Duration    `yaml:"delay,omitempty"`
 	Request     Request          `yaml:"request"`
 	OriginRules []map[string]any `yaml:"rules" json:"-"`
 	DependOnIDs []uint64         `yaml:"dependOnIDs,omitempty"`

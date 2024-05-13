@@ -1,6 +1,6 @@
 - id: 1
+  desc: "list all books"
   request:
-    # optional
     method: "get"
     url: "http://{{ HOST }}/api/books"
   rules:
@@ -11,6 +11,7 @@
       Expected: "Effective Go"
       
 - id: 2
+  desc: "add a new book"
   request:
     # optional
     method: "post"
@@ -36,6 +37,7 @@
     type: integer
     
 - id: 3
+  desc: "modify the book3"
   # Depends on TestCase2
   # TestCase2 must be executed first
   dependOnIDs: [2]
@@ -60,6 +62,7 @@
       Expected: "book3_author-2"
       
 - id: 4
+  desc: "delete the book1"
   request:
     # optional
     method: "delete"
@@ -71,6 +74,9 @@
       expectedStatus: 204
 
 - id: 5
+  desc: "try to get book1"
+  # Delay for 5 seconds before executing
+  delay: 5s
   dependOnIDs: [4]
   request:
     # optional

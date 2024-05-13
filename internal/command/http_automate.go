@@ -33,6 +33,11 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCase) {
 	successCount := 0
 	failedCount := 0
 	for filePath := range httpTestCases {
+		// if ignore_testcase_fail is false and some testcases have failed.
+		if resource.TerminationFlag.Load() {
+			break
+		}
+
 		info := HandleSingleFile(workerNum, filePath)
 		finishCount += info.Total
 		successCount += info.SuccessCount
@@ -102,6 +107,11 @@ func HandleSingleFile(workerNum int, filePath string) *ResultInfo {
 			successCount++
 		} else {
 			failedCount++
+			// terminate subsequent testcases
+			if !resource.GlobalConfig.Global.IgnoreTestCaseFail {
+				resource.TerminationFlag.Store(true)
+				break
+			}
 		}
 
 		stateGroup.SetState(tcResult.ID, tcResult.State)
