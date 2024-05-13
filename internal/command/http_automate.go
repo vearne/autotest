@@ -121,6 +121,7 @@ func HandleSingleFile(workerNum int, filePath string) *ResultInfo {
 		}
 
 		finishCount++
+		//nolint: errcheck
 		bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
 		if finishCount >= len(testcases) {
 			// finish all test cases

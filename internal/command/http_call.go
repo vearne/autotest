@@ -75,10 +75,11 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		return &r
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), resource.GlobalConfig.Global.RequestTimeout)
+	timeout := resource.GlobalConfig.Global.RequestTimeout
+	rCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	in := resource.RestyClient.R().SetContext(ctx)
+	in := resource.RestyClient.R().SetContext(rCtx)
 	for _, item := range req.Headers {
 		strList := strings.Split(item, ":")
 		in.SetHeader(strings.TrimSpace(strList[0]), strings.TrimSpace(strList[1]))
@@ -125,9 +126,8 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	}
 
 	// verify
-	VerifyResult := true
 	for idx, rule := range m.testcase.VerifyRules {
-		VerifyResult = rule.Verify(out)
+		VerifyResult := rule.Verify(out)
 		if !VerifyResult {
 			zaplog.Error("HttpTestCallable rules validate failed",
 				zap.Uint64("testCaseId", m.testcase.ID),

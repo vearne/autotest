@@ -19,7 +19,7 @@ func TestHttpBodyAtLeastOneRule(t *testing.T) {
 	resp.SetBody([]byte(jsonStr1))
 	for _, item := range cases {
 		rule := HttpBodyAtLeastOneRule{item.xpath, item.expected}
-		assert.True(t, rule.Valid(&resp))
+		assert.True(t, rule.Verify(&resp))
 	}
 }
 
@@ -36,7 +36,7 @@ func TestHttpBodyEqualRule(t *testing.T) {
 	resp.SetBody([]byte(jsonStr1))
 	for _, item := range cases {
 		rule := HttpBodyEqualRule{item.xpath, item.expected}
-		assert.True(t, rule.Valid(&resp))
+		assert.True(t, rule.Verify(&resp))
 	}
 
 }
@@ -55,6 +55,6 @@ func TestHttpBodyEqualRule2(t *testing.T) {
 	resp.SetBody([]byte(jsonStr2))
 	for _, item := range cases {
 		rule := HttpBodyEqualRule{item.xpath, item.expected}
-		assert.True(t, rule.Valid(&resp))
+		assert.True(t, rule.Verify(&resp))
 	}
 }
