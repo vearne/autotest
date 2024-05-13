@@ -20,8 +20,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
+      - name: remove git
+        run: rm -rf .git
       - name: golangci-lint
-        run: golangci-lint run 
+        run: golangci-lint run
   
   build:
     runs-on: ubuntu-latest
