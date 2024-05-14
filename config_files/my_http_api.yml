@@ -60,7 +60,14 @@
     - name: "HttpBodyEqualRule"
       xpath: "/author"
       Expected: "book3_author-2"
-      
+    - name: "HttpLuaRule"
+      lua: |
+        function verify(r)
+          local json = require "json";
+          local book = json.decode(r:body());
+          return book.title == "book3_title" and book.author == "book3_author-2";
+        end
+ 
 - id: 4
   desc: "delete the book1"
   request:

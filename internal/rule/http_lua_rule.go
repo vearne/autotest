@@ -1,16 +1,27 @@
 package rule
 
 import (
+	"github.com/go-resty/resty/v2"
+	"github.com/vearne/zaplog"
 	"github.com/yuin/gopher-lua"
+	"go.uber.org/zap"
 	luajson "layeh.com/gopher-json"
+	"strconv"
+	"sync"
 )
 
 var L *lua.LState
 
+/*
+Lua virtual machine is not thread-safe
+so we need LuaVMLock to protect L
+*/
+var LuaVMLock sync.Mutex
+
 func init() {
 	L = lua.NewState()
 	//defer L.Close()
-	// 注册 JSON 库
+	// register json lib
 	luajson.Preload(L)
 	registerHttpRespType(L)
 }
@@ -77,4 +88,40 @@ func registerHttpRespType(L *lua.LState) {
 	L.SetField(mt, "new", L.NewFunction(newHttpResp))
 	// methods
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), httpRespMethods))
+}
+
+type HttpLuaRule struct {
+	LuaStr string `json:"lua"`
+}
+
+func (r *HttpLuaRule) Name() string {
+	return "HttpLuaRule"
+}
+
+func (r *HttpLuaRule) Verify(resp *resty.Response) bool {
+	L.SetGlobal("codeStr", lua.LString(strconv.Itoa(resp.StatusCode())))
+	L.SetGlobal("bodyStr", lua.LString(resp.String()))
+
+	source := r.LuaStr +
+		`
+r = HttpResp.new(codeStr, bodyStr);
+return verify(r);
+`
+	if err := runLuaStr(source); err != nil {
+		zaplog.Error("HttpLuaRule-Verify",
+			zap.Int("status", resp.StatusCode()),
+			zap.String("body", resp.String()),
+			zap.String("LuaStr", r.LuaStr),
+			zap.Error(err))
+		return false
+	}
+	lv := L.Get(-1)
+	return lv == lua.LTrue
+}
+
+func runLuaStr(source string) error {
+	LuaVMLock.Lock()
+	defer LuaVMLock.Unlock()
+
+	return L.DoString(source)
 }
