@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var GlobalConfig config.AutoTestConfig
@@ -53,6 +54,10 @@ func ParseConfigFile(filePath string) error {
 	err = yaml.Unmarshal(b, &GlobalConfig)
 	if err != nil {
 		return err
+	}
+
+	if GlobalConfig.Global.RequestTimeout < time.Second {
+		GlobalConfig.Global.RequestTimeout = time.Second
 	}
 
 	slog.Info("2) parse http rule files")

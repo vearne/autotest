@@ -13,6 +13,7 @@ require (
 	github.com/vearne/executor v0.0.3
 	github.com/vearne/simplelog v0.0.2
 	github.com/vearne/zaplog v0.0.2
+	github.com/yuin/gopher-lua v1.1.1
 	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -39,4 +40,5 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
+	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf // indirect
 )
