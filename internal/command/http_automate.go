@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -56,6 +57,9 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCase) {
 
 func GenReportFile(testCasefilePath string, tcResultList []HttpTestCaseResult) {
 	filename := filepath.Base(testCasefilePath)
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	filename = name + ".csv"
+
 	reportDirPath := resource.GlobalConfig.Global.Report.DirPath
 	reportPath := filepath.Join(reportDirPath, filename)
 	sort.Slice(tcResultList, func(i, j int) bool {
@@ -64,8 +68,12 @@ func GenReportFile(testCasefilePath string, tcResultList []HttpTestCaseResult) {
 	var records [][]string
 	records = append(records, []string{"id", "desc", "state", "reason"})
 	for _, item := range tcResultList {
+		reasonStr := item.Reason.String()
+		if item.Reason == model.ReasonSuccess {
+			reasonStr = ""
+		}
 		records = append(records, []string{strconv.Itoa(int(item.ID)),
-			item.Desc, item.State.String(), item.Reason.String()})
+			item.Desc, item.State.String(), reasonStr})
 	}
 	util.WriterCSV(reportPath, records)
 }
