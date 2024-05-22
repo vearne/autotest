@@ -16,6 +16,7 @@ import (
 type HttpTestCaseResult struct {
 	State  model.State
 	ID     uint64
+	Desc   string
 	Reason model.Reason
 	// actual request
 	Request   config.Request
@@ -34,6 +35,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	r := executor.GPResult{}
 	tcResult := HttpTestCaseResult{
 		ID:        m.testcase.ID,
+		Desc:      m.testcase.Desc,
 		State:     model.StateSuccessFul,
 		Reason:    model.ReasonSuccess,
 		TestCase:  m.testcase,

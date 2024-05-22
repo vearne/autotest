@@ -57,6 +57,7 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	slog.Info("4. Execute test cases")
 	HttpAutomateTest(resource.HttpTestCases)
 	// 5. 生成报告
+	slog.Info("5. output report to file")
 	return nil
 }
 
