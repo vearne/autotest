@@ -95,7 +95,8 @@ autotest extract -x "//title" -j '[
 
 ## TODO
 * [x] 1) 支持使用脚本语言Lua判断HTTP response是否符合预期
-* [ ] 2) 支持对gRPC协议的API服务进行自动化测试
+* [x] 2) 输出report到文件中
+* [ ] 3) 支持对gRPC协议的API服务进行自动化测试
 
 
 

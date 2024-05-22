@@ -13,7 +13,10 @@ type AutoTestConfig struct {
 		RequestTimeout     time.Duration `yaml:"request_timeout"`
 		Logger             struct {
 			Level    string `yaml:"level"`
-			FilePath string `yaml:"filepath"`
+			FilePath string `yaml:"file_path"`
+		} `yaml:"logger"`
+		Report struct {
+			DirPath string `yaml:"dir_path"`
 		}
 	} `yaml:"global"`
 

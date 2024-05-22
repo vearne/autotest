@@ -7,7 +7,37 @@ import (
 
 type State int
 
+func (s State) String() string {
+	switch s {
+	case StateNotExecuted:
+		return "StateNotExecuted"
+	case StateSuccessFul:
+		return "StateSuccessFul"
+	case StateFailed:
+		return "StateFailed"
+	}
+	return ""
+}
+
 type Reason int
+
+func (r Reason) String() string {
+	switch r {
+	case ReasonSuccess:
+		return "ReasonSuccess"
+	case ReasonRequestFailed:
+		return "ReasonRequestFailed"
+	case ReasonRuleVerifyFailed:
+		return "ReasonRuleVerifyFailed"
+	case ReasonDependentItemNotCompleted:
+		return "ReasonDependentItemNotCompleted"
+	case ReasonTemplateRenderError:
+		return "ReasonTemplateRenderError"
+	case ReasonDependentItemFailed:
+		return "ReasonDependentItemFailed"
+	}
+	return ""
+}
 
 type ExportType int
 

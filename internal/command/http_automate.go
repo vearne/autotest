@@ -6,10 +6,15 @@ import (
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/resource"
+	"github.com/vearne/autotest/internal/util"
 	"github.com/vearne/executor"
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 	"go.uber.org/zap"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -38,17 +43,42 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCase) {
 			break
 		}
 
-		info := HandleSingleFile(workerNum, filePath)
+		info, tcResultList := HandleSingleFile(workerNum, filePath)
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
 		slog.Info("HttpTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
+		// generate report file
+		GenReportFile(filePath, tcResultList)
 	}
 	slog.Info("[end]HttpTestCases, total:%v, cost:%v", total, time.Since(begin))
 }
 
-func HandleSingleFile(workerNum int, filePath string) *ResultInfo {
+func GenReportFile(testCasefilePath string, tcResultList []HttpTestCaseResult) {
+	filename := filepath.Base(testCasefilePath)
+	name := strings.TrimSuffix(filename, filepath.Ext(filename))
+	filename = name + ".csv"
+
+	reportDirPath := resource.GlobalConfig.Global.Report.DirPath
+	reportPath := filepath.Join(reportDirPath, filename)
+	sort.Slice(tcResultList, func(i, j int) bool {
+		return tcResultList[i].ID < tcResultList[j].ID
+	})
+	var records [][]string
+	records = append(records, []string{"id", "desc", "state", "reason"})
+	for _, item := range tcResultList {
+		reasonStr := item.Reason.String()
+		if item.Reason == model.ReasonSuccess {
+			reasonStr = ""
+		}
+		records = append(records, []string{strconv.Itoa(int(item.ID)),
+			item.Desc, item.State.String(), reasonStr})
+	}
+	util.WriterCSV(reportPath, records)
+}
+
+func HandleSingleFile(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {
 
 	workerNum = min(workerNum, 10)
 	testcases := resource.HttpTestCases[filePath]
@@ -87,6 +117,8 @@ func HandleSingleFile(workerNum int, filePath string) *ResultInfo {
 	finishCount := 0
 	successCount := 0
 	failedCount := 0
+
+	var tcResultList []HttpTestCaseResult
 	for future := range futureChan {
 		gResult := future.Get()
 		tcResult := gResult.Value.(HttpTestCaseResult)
@@ -115,6 +147,9 @@ func HandleSingleFile(workerNum int, filePath string) *ResultInfo {
 		}
 
 		stateGroup.SetState(tcResult.ID, tcResult.State)
+		// prepare to write report
+		tcResultList = append(tcResultList, tcResult)
+
 		// process the variables generated when testcase is run
 		for key, value := range tcResult.KeyValues {
 			resource.CustomerVars.Store(key, value)
@@ -130,5 +165,5 @@ func HandleSingleFile(workerNum int, filePath string) *ResultInfo {
 	}
 	slog.Info("[end]HandleSingleFile, filePath:%v", filePath)
 	return &ResultInfo{Total: finishCount, SuccessCount: successCount,
-		FailedCount: failedCount}
+		FailedCount: failedCount}, tcResultList
 }
