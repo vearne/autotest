@@ -17,13 +17,11 @@ var books = []pb.Book{
 
 type BookServer struct {
 	lock    sync.RWMutex
-	books   []pb.Book
-	counter uint64
+	counter int64
 }
 
 func NewBookServer() *BookServer {
 	var b BookServer
-	b.books = books
 	b.counter = 3
 	return &b
 }
@@ -37,7 +35,7 @@ func (b BookServer) AddBook(ctx context.Context, in *pb.AddBookRequest) (*pb.Add
 	b.counter++
 	book.Title = in.Title
 	book.Author = in.Author
-	b.books = append(books, book)
+	books = append(books, book)
 
 	out := new(pb.AddBookReply)
 	out.Code = pb.CodeEnum_Success
@@ -51,7 +49,6 @@ func (b BookServer) DeleteBook(ctx context.Context, in *pb.DeleteBookRequest) (*
 	defer b.lock.Unlock()
 
 	out := new(pb.DeleteBookReply)
-
 	for i, book := range books {
 		if book.Id == in.Id {
 			books = append(books[:i], books[i+1:]...)
@@ -77,6 +74,8 @@ func (b BookServer) UpdateBook(ctx context.Context, in *pb.UpdateBookRequest) (*
 				books[i].Author = in.Author
 			}
 			out.Code = pb.CodeEnum_Success
+			data := books[i]
+			out.Data = &data
 			return out, nil
 		}
 	}
@@ -109,8 +108,8 @@ func (b BookServer) ListBook(ctx context.Context, in *pb.ListBookRequest) (*pb.L
 	out := new(pb.ListBookReply)
 	out.Code = pb.CodeEnum_Success
 	out.List = make([]*pb.Book, 0)
-	for i := range b.books {
-		record := b.books[i]
+	for i := 0; i < len(books); i++ {
+		record := books[i]
 		out.List = append(out.List, &record)
 	}
 	return out, nil
@@ -125,6 +124,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen, %v\n", err)
 	}
+	log.Println("starting...")
 	if err := server.Serve(lis); err != nil {
 		log.Fatalf("server.Serve, %v\n", err)
 	}

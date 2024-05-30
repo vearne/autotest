@@ -11,7 +11,7 @@ service Bookstore{
 }
 
 message Book {
-   uint64 id = 1;
+   sint64 id = 1;
    string title = 2;
    string author = 3;
 }
@@ -29,7 +29,7 @@ message AddBookReply {
 
 
 message DeleteBookRequest {
-    uint64 id  = 1;
+    sint64 id  = 1;
 }
 
 message DeleteBookReply {
@@ -38,7 +38,7 @@ message DeleteBookReply {
 }
 
 message UpdateBookRequest {
-    uint64 id  = 1;
+    sint64 id  = 1;
     string title = 2;
     string author = 3;
 }
@@ -50,7 +50,7 @@ message UpdateBookReply {
 }
 
 message GetBookRequest {
-    uint64 id  = 1;
+    sint64 id  = 1;
 }
 
 message GetBookReply {
