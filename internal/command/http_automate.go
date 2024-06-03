@@ -24,7 +24,7 @@ type ResultInfo struct {
 	FailedCount  int
 }
 
-func HttpAutomateTest(httpTestCases map[string][]*config.TestCase) {
+func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 	total := 0
 	for _, testcases := range httpTestCases {
 		total += len(testcases)

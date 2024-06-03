@@ -60,7 +60,7 @@ func (g *StateGroup) GetState(id uint64) State {
 	return g.states[id]
 }
 
-func NewStateGroup(testCases []*config.TestCase) *StateGroup {
+func NewStateGroup(testCases []*config.TestCaseHttp) *StateGroup {
 	var g StateGroup
 	g.states = make(map[uint64]State, 0)
 	for i := 0; i < len(testCases); i++ {

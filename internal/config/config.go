@@ -24,7 +24,7 @@ type AutoTestConfig struct {
 	GrpcRuleFiles []string `yaml:"grpc_rule_files"`
 }
 
-type TestCase struct {
+type TestCaseHttp struct {
 	ID   uint64 `yaml:"id"`
 	Desc string `yaml:"desc"`
 	// Delay for a while before executing

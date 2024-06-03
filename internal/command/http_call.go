@@ -20,12 +20,12 @@ type HttpTestCaseResult struct {
 	Reason model.Reason
 	// actual request
 	Request   config.Request
-	TestCase  *config.TestCase
+	TestCase  *config.TestCaseHttp
 	KeyValues map[string]any
 }
 
 type HttpTestCallable struct {
-	testcase   *config.TestCase
+	testcase   *config.TestCaseHttp
 	stateGroup *model.StateGroup
 }
 
