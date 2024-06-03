@@ -19,6 +19,7 @@ import (
 
 var GlobalConfig config.AutoTestConfig
 var HttpTestCases map[string][]*config.TestCaseHttp
+var GrpcTestCases map[string][]*config.TestCaseGrpc
 
 var EnvVars map[string]string
 var CustomerVars sync.Map
@@ -29,6 +30,7 @@ var TerminationFlag atomic.Bool
 func init() {
 	EnvVars = make(map[string]string, 10)
 	HttpTestCases = make(map[string][]*config.TestCaseHttp, 10)
+	GrpcTestCases = make(map[string][]*config.TestCaseGrpc, 10)
 	TerminationFlag.Store(false)
 }
 
@@ -138,7 +140,7 @@ func ParseConfigFile(filePath string) error {
 			return err
 		}
 
-		var testcases []*config.TestCaseHttp
+		var testcases []*config.TestCaseGrpc
 		err = yaml.Unmarshal(b, &testcases)
 		if err != nil {
 			slog.Error("file:%v parse error, %v", f, err)
@@ -148,32 +150,32 @@ func ParseConfigFile(filePath string) error {
 		for i := 0; i < len(testcases); i++ {
 			c := testcases[i]
 			c.Request.Body = strings.ReplaceAll(c.Request.Body, "\n", "")
-			c.VerifyRules = make([]rule.VerifyRule, 0)
+			c.VerifyRules = make([]rule.VerifyRuleGrpc, 0)
 			for _, r := range c.OriginRules {
 				b, _ := json.Marshal(r)
 				switch r["name"] {
-				case "HttpStatusEqualRule":
-					var item rule.HttpStatusEqualRule
+				case "GrpcCodeEqualRule":
+					var item rule.GrpcCodeEqualRule
 					err = json.Unmarshal(b, &item)
 					if err != nil {
-						slog.Error("parse rule[HttpStatusEqualRule], %v", err)
+						slog.Error("parse rule[GrpcCodeEqualRule], %v", err)
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
-				case "HttpBodyEqualRule":
-					var item rule.HttpBodyEqualRule
+				case "GrpcBodyEqualRule":
+					var item rule.GrpcBodyEqualRule
 					err = json.Unmarshal(b, &item)
 					if err != nil {
-						slog.Error("parse rule[HttpBodyEqualRule], %v", err)
+						slog.Error("parse rule[GrpcBodyEqualRule], %v", err)
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
 
-				case "HttpBodyAtLeastOneRule":
-					var item rule.HttpBodyAtLeastOneRule
+				case "GrpcBodyAtLeastOneRule":
+					var item rule.GrpcBodyAtLeastOneRule
 					err = json.Unmarshal(b, &item)
 					if err != nil {
-						slog.Error("parse rule[HttpBodyAtLeastOneRule], %v", err)
+						slog.Error("parse rule[GrpcBodyAtLeastOneRule], %v", err)
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
@@ -189,8 +191,8 @@ func ParseConfigFile(filePath string) error {
 
 		slog.Info("parse file:%v, len(testcases):%v", f, len(testcases))
 		absolutePath, _ := filepath.Abs(f)
-		HttpTestCases[absolutePath] = testcases
-		GlobalConfig.HttpRuleFiles[idx] = absolutePath
+		GrpcTestCases[absolutePath] = testcases
+		GlobalConfig.GrpcRuleFiles[idx] = absolutePath
 	}
 
 	slog.Info("[end]ParseConfigFile")

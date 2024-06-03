@@ -8,7 +8,7 @@ import (
 
 // 实现 VerifyRule
 type HttpStatusEqualRule struct {
-	ExpectedStatus int `json:"expectedStatus"`
+	Expected int `json:"expected"`
 }
 
 func (r *HttpStatusEqualRule) Name() string {
@@ -16,7 +16,7 @@ func (r *HttpStatusEqualRule) Name() string {
 }
 
 func (r *HttpStatusEqualRule) Verify(resp *resty.Response) bool {
-	return resp.StatusCode() == r.ExpectedStatus
+	return resp.StatusCode() == r.Expected
 }
 
 // 实现 VerifyRule

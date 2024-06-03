@@ -19,7 +19,7 @@ type HttpTestCaseResult struct {
 	Desc   string
 	Reason model.Reason
 	// actual request
-	Request   config.Request
+	Request   config.RequestHttp
 	TestCase  *config.TestCaseHttp
 	KeyValues map[string]any
 }
@@ -65,7 +65,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	}
 
 	zaplog.Debug("before render()", zap.Any("request", m.testcase.Request))
-	req, err := render(m.testcase.Request)
+	req, err := renderRequestHttp(m.testcase.Request)
 	tcResult.Request = req
 
 	zaplog.Debug("after render()", zap.Any("request", tcResult.Request))
@@ -146,7 +146,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	return &r
 }
 
-func render(req config.Request) (config.Request, error) {
+func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 	var err error
 	// url
 	req.URL, err = templateRender(req.URL)

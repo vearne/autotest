@@ -10,6 +10,11 @@ type VerifyRule interface {
 	Verify(response *resty.Response) bool
 }
 
+type VerifyRuleGrpc interface {
+	Name() string
+	Verify(response *GrpcResp) bool
+}
+
 func convStr(v any) string {
 	return fmt.Sprintf("%v", v)
 }

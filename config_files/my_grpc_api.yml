@@ -1,0 +1,14 @@
+- id: 1
+  desc: "list all books"
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/ListBook"
+    body: "{}"
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: 0
+    - name: "GrpcBodyAtLeastOneRule"
+      xpath: "/list/title"
+      expected: "Effective Go"
+    
+    

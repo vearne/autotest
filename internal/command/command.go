@@ -26,7 +26,7 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	envFilePath := cmd.String("env-file")
 	slog.Info("env-file:%v", envFilePath)
 
-	// 1. 解析配置文件
+	// 1. Parsing configuration files
 	slog.Info("1. Parse config file")
 	// 1.1 config file
 	err := resource.ParseConfigFile(confFilePath)
@@ -53,11 +53,13 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
 	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
 
-	// 4. 初始化执行器, 并发执行testcase (执行失败可能需要解释失败的原因)
+	// 4. Initialize the executor and execute the testcase concurrently
+	// (if the execution fails, you may need to explain the reason for the failure)
 	slog.Info("4. Execute test cases")
 	HttpAutomateTest(resource.HttpTestCases)
-	// 5. 生成报告
-	slog.Info("5. output report to file")
+	GrpcAutomateTest(resource.GrpcTestCases)
+	// 6. generate report
+	slog.Info("6. output report to file")
 	return nil
 }
 
@@ -78,6 +80,23 @@ func ValidateConfig(ctx context.Context, cmd *cli.Command) error {
 }
 
 func AllCheck() error {
+	var err error
+	err = CheckTestCaseHttp()
+	if err != nil {
+		return err
+	}
+
+	err = CheckTestCaseGrpc()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CheckTestCaseHttp() error {
+	slog.Info("CheckTestCaseHttp")
+
 	slog.Info("1. check xpath")
 	for filePath, testcases := range resource.HttpTestCases {
 		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
@@ -120,6 +139,75 @@ func AllCheck() error {
 	}
 	slog.Info("3. check dependencies")
 	for filePath, testcases := range resource.HttpTestCases {
+		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
+		exist := make(map[uint64]struct{})
+		for _, tc := range testcases {
+			exist[tc.ID] = struct{}{}
+		}
+		for _, tc := range testcases {
+			for _, dID := range tc.DependOnIDs {
+				if _, ok := exist[dID]; !ok {
+					slog.Error("For testcase %v, the testcase %v that it depend on does not exist",
+						tc.ID, dID)
+					return ErrorDependencyNotExist
+				}
+				if dID >= tc.ID {
+					slog.Error("The ID of the dependent testcase must be smaller "+
+						"than the ID of the current testcase, testcase:%v, dependent testcase:%v",
+						tc.ID, dID)
+					return ErrorIDRestrict
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func CheckTestCaseGrpc() error {
+	slog.Info("CheckTestCaseGrpc")
+
+	slog.Info("1. check xpath")
+	for filePath, testcases := range resource.GrpcTestCases {
+		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
+		for _, tc := range testcases {
+			for _, r := range tc.VerifyRules {
+				switch r.Name() {
+				case "GrpcBodyEqualRule":
+					rule := r.(*rule.GrpcBodyEqualRule)
+					_, err := xpath.Compile(rule.Xpath)
+					if err != nil {
+						slog.Error("rule error, testCaseId:%v, xpath:%v", tc.ID, rule.Xpath)
+						return err
+					}
+				case "GrpcBodyAtLeastOneRule":
+					rule := r.(*rule.GrpcBodyAtLeastOneRule)
+					_, err := xpath.Compile(rule.Xpath)
+					if err != nil {
+						slog.Error("rule error, testCaseId:%v, xpath:%v", tc.ID, rule.Xpath)
+						return err
+					}
+				default:
+					slog.Debug("ignore rule:%v", r.Name())
+				}
+			}
+		}
+	}
+
+	slog.Info("2. check if ID is duplicate")
+	for filePath, testcases := range resource.GrpcTestCases {
+		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
+		exist := make(map[uint64]struct{})
+		for _, tc := range testcases {
+			_, ok := exist[tc.ID]
+			if ok {
+				slog.Error("filePath:%v, ID [%v] is duplicate", filePath, tc.ID)
+				return ErrorIDduplicate
+			}
+			exist[tc.ID] = struct{}{}
+		}
+	}
+	slog.Info("3. check dependencies")
+	for filePath, testcases := range resource.GrpcTestCases {
 		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
 		exist := make(map[uint64]struct{})
 		for _, tc := range testcases {

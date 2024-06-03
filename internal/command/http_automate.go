@@ -29,6 +29,10 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 	for _, testcases := range httpTestCases {
 		total += len(testcases)
 	}
+	if total <= 0 {
+		return
+	}
+
 	begin := time.Now()
 	slog.Info("[start]HttpTestCases, total:%v", total)
 
@@ -43,19 +47,19 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 			break
 		}
 
-		info, tcResultList := HandleSingleFile(workerNum, filePath)
+		info, tcResultList := HandleSingleFileHttp(workerNum, filePath)
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
 		slog.Info("HttpTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
 		// generate report file
-		GenReportFile(filePath, tcResultList)
+		GenReportFileHttp(filePath, tcResultList)
 	}
 	slog.Info("[end]HttpTestCases, total:%v, cost:%v", total, time.Since(begin))
 }
 
-func GenReportFile(testCasefilePath string, tcResultList []HttpTestCaseResult) {
+func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResult) {
 	filename := filepath.Base(testCasefilePath)
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
 	filename = name + ".csv"
@@ -78,7 +82,7 @@ func GenReportFile(testCasefilePath string, tcResultList []HttpTestCaseResult) {
 	util.WriterCSV(reportPath, records)
 }
 
-func HandleSingleFile(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {
+func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {
 
 	workerNum = min(workerNum, 10)
 	testcases := resource.HttpTestCases[filePath]
