@@ -1,4 +1,23 @@
 - id: 1
+  desc: "get one book"
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/GetBook"
+    body: |
+      {
+          "id": 1
+      }
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/data/title"
+      expected: "The Go Programming Language"
+
+- id: 2
   desc: "list all books"
   request:
     address: "{{ GRPC_SERVER }}"
@@ -6,9 +25,120 @@
     body: "{}"
   rules:
     - name: "GrpcCodeEqualRule"
-      expected: 0
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
     - name: "GrpcBodyAtLeastOneRule"
-      xpath: "/list/title"
-      expected: "Effective Go"
-    
-    
+      xpath: "//title"
+      expected: "The Go Programming Language"
+
+- id: 3
+  desc: "add new book"
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/AddBook"
+    body: |
+      {
+        "title": "title3",
+        "author": "author3"
+      }
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/data/title"
+      expected: "title3"
+  export:
+    xpath: "/data/id"
+    # Extract the id value and export it to the variable MY_BOOK_ID
+    exportTo: "MY_BOOK_ID"
+    # default is string, optional value: integer | string | float
+    type: integer
+
+- id: 4
+  desc: "get book 3"
+  dependOnIDs: [3]
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/GetBook"
+    body: |
+      {
+          "id": {{ MY_BOOK_ID }}
+      }
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
+    - name: "GrpcBodyEqualRule"
+      xpath: "//title"
+      expected: "title3"
+      
+- id: 5
+  desc: "update book 2"
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/UpdateBook"
+    body: |
+      {
+        "id": 2,
+        "title": "title2-2",
+        "author": "author2-2"
+      }
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/data/title"
+      expected: "title2-2"
+
+- id: 6
+  desc: "get book 2"
+  delay: 1s
+  dependOnIDs: [5]
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/GetBook"
+    body: |
+      {
+          "id": 2
+      }
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/data/title"
+      expected: "title2-2"
+      
+- id: 7
+  desc: "get book 2"
+  delay: 1s
+  dependOnIDs: [6]
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/GetBook"
+    body: |
+      {
+          "id": 2
+      }
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcLuaRule"
+      lua: |
+        function verify(r)
+          local json = require "json";
+          local body = json.decode(r:body());
+          return body.data.title == "title2-2" and body.data.author == "author2-2";
+        end

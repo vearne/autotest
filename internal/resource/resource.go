@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
+	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/rule"
 	slog "github.com/vearne/simplelog"
+	"golang.org/x/sync/singleflight"
 	"gopkg.in/yaml.v3"
 	"net/http"
 	"os"
@@ -27,11 +29,16 @@ var CustomerVars sync.Map
 var RestyClient *resty.Client
 var TerminationFlag atomic.Bool
 
+var DescSourceCache *model.DescSourceCache
+
+var SingleFlightGroup singleflight.Group
+
 func init() {
 	EnvVars = make(map[string]string, 10)
 	HttpTestCases = make(map[string][]*config.TestCaseHttp, 10)
 	GrpcTestCases = make(map[string][]*config.TestCaseGrpc, 10)
 	TerminationFlag.Store(false)
+	DescSourceCache = model.NewDescSourceCache()
 }
 
 func InitRestyClient(debug bool) {
@@ -176,6 +183,15 @@ func ParseConfigFile(filePath string) error {
 					err = json.Unmarshal(b, &item)
 					if err != nil {
 						slog.Error("parse rule[GrpcBodyAtLeastOneRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+
+				case "GrpcLuaRule":
+					var item rule.GrpcLuaRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[GrpcLuaRule], %v", err)
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)

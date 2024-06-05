@@ -2,24 +2,20 @@ package rule
 
 import (
 	"github.com/antchfx/jsonquery"
+	"github.com/vearne/autotest/internal/model"
 	"strings"
 )
 
-type GrpcResp struct {
-	Code    int
-	JsonStr string
-}
-
 // implement VerifyRule
 type GrpcCodeEqualRule struct {
-	Expected int `json:"expected"`
+	Expected string `json:"expected"`
 }
 
 func (r *GrpcCodeEqualRule) Name() string {
 	return "GrpcCodeEqualRule"
 }
 
-func (r *GrpcCodeEqualRule) Verify(resp *GrpcResp) bool {
+func (r *GrpcCodeEqualRule) Verify(resp *model.GrpcResp) bool {
 	return resp.Code == r.Expected
 }
 
@@ -32,8 +28,8 @@ func (r *GrpcBodyEqualRule) Name() string {
 	return "GrpcBodyEqualRule"
 }
 
-func (r *GrpcBodyEqualRule) Verify(resp *GrpcResp) bool {
-	doc, err := jsonquery.Parse(strings.NewReader(resp.JsonStr))
+func (r *GrpcBodyEqualRule) Verify(resp *model.GrpcResp) bool {
+	doc, err := jsonquery.Parse(strings.NewReader(resp.Body))
 	if err != nil {
 		return false
 	}
@@ -52,8 +48,8 @@ func (r *GrpcBodyAtLeastOneRule) Name() string {
 	return "GrpcBodyAtLeastOneRule"
 }
 
-func (r *GrpcBodyAtLeastOneRule) Verify(resp *GrpcResp) bool {
-	doc, err := jsonquery.Parse(strings.NewReader(resp.JsonStr))
+func (r *GrpcBodyAtLeastOneRule) Verify(resp *model.GrpcResp) bool {
+	doc, err := jsonquery.Parse(strings.NewReader(resp.Body))
 	if err != nil {
 		return false
 	}

@@ -1,12 +1,12 @@
 package command
 
 import (
+	"fmt"
 	"github.com/antchfx/jsonquery"
 	"github.com/flosch/pongo2/v6"
+	"github.com/spf13/cast"
 	"github.com/vearne/autotest/internal/config"
-	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/resource"
-	"reflect"
 	"strings"
 )
 
@@ -40,8 +40,14 @@ func exportTo(jsonStr string, export *config.Export) (any, error) {
 	node := jsonquery.FindOne(doc, export.Xpath)
 	if node != nil && node.Value() != nil {
 		value := node.Value()
-		if reflect.TypeOf(value).String() == "float64" && export.Type == model.TypeInteger {
-			return int(value.(float64)), nil
+		str := fmt.Sprintf("%v", value)
+		switch export.Type {
+		case "integer":
+			return cast.ToInt(str), nil
+		case "float":
+			return cast.ToFloat64(str), nil
+		default:
+			return str, nil
 		}
 	}
 	return nil, nil

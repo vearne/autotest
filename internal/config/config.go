@@ -36,6 +36,10 @@ type TestCaseHttp struct {
 	VerifyRules []rule.VerifyRule
 }
 
+func (t *TestCaseHttp) GetID() uint64 {
+	return t.ID
+}
+
 type Export struct {
 	Xpath    string `yaml:"xpath"`
 	ExportTo string `yaml:"exportTo"`
@@ -61,8 +65,13 @@ type TestCaseGrpc struct {
 	VerifyRules []rule.VerifyRuleGrpc
 }
 
+func (t *TestCaseGrpc) GetID() uint64 {
+	return t.ID
+}
+
 type RequestGrpc struct {
-	Address string `yaml:"address"`
-	Symbol  string `yaml:"symbol"`
-	Body    string `yaml:"body"`
+	Address string   `yaml:"address"`
+	Symbol  string   `yaml:"symbol"`
+	Headers []string `yaml:"headers"`
+	Body    string   `yaml:"body"`
 }

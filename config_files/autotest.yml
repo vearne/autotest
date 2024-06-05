@@ -4,7 +4,7 @@ global:
   worker_num: 5
   # default: true
   ignore_testcase_fail: true
-  debug: false
+  debug: true
   # Timeout setting for each request
   request_timeout: 5s
   
@@ -12,7 +12,7 @@ global:
     # 1. "info"
     # 2. "debug"
     # 3. "error"
-    level: "info"
+    level: "debug"
     file_path: "/var/log/test/autotest.log"
   report:
     dir_path: "/var/log/test/report/"
@@ -21,7 +21,7 @@ http_rule_files:
   - "./config_files/my_http_api.yml"
 
 grpc_rule_files:
-#  - "my_grpc_api.yml"
+  - "./config_files/my_grpc_api.yml"
 
   
   

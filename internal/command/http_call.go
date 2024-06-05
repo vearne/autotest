@@ -42,7 +42,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		KeyValues: map[string]any{},
 	}
 
-	// Check other test cases of dependencies
+	// 1. Check other test cases of dependencies
 	for _, id := range m.testcase.DependOnIDs {
 		if m.stateGroup.GetState(id) == model.StateNotExecuted { // a certain dependency is not yet completed
 			tcResult.State = model.StateNotExecuted
@@ -59,16 +59,19 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		}
 	}
 
+	// 2. deal delay
 	if m.testcase.Delay > 0 {
 		zaplog.Debug("sleep", zap.Any("delay", m.testcase.Delay))
 		time.Sleep(m.testcase.Delay)
 	}
 
-	zaplog.Debug("before render()", zap.Any("request", m.testcase.Request))
+	// 3. render
+	zaplog.Info("before render()", zap.Uint64("testCaseId", m.testcase.ID),
+		zap.Any("request", m.testcase.Request))
 	req, err := renderRequestHttp(m.testcase.Request)
 	tcResult.Request = req
-
-	zaplog.Debug("after render()", zap.Any("request", tcResult.Request))
+	zaplog.Info("after render()", zap.Uint64("testCaseId", m.testcase.ID),
+		zap.Any("request", tcResult.Request))
 	if err != nil {
 		tcResult.State = model.StateFailed
 		tcResult.Reason = model.ReasonTemplateRenderError
@@ -77,10 +80,12 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		return &r
 	}
 
+	// 4. timeout
 	timeout := resource.GlobalConfig.Global.RequestTimeout
 	rCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	// 5. trigger remote request
 	in := resource.RestyClient.R().SetContext(rCtx)
 	for _, item := range req.Headers {
 		strList := strings.Split(item, ":")
@@ -119,7 +124,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		return &r
 	}
 
-	// export
+	// 6. export
 	if m.testcase.Export != nil {
 		exportConfig := m.testcase.Export
 		// TODO handle error
@@ -127,7 +132,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 		tcResult.KeyValues[exportConfig.ExportTo] = value
 	}
 
-	// verify
+	// 7. verify
 	for idx, rule := range m.testcase.VerifyRules {
 		VerifyResult := rule.Verify(out)
 		if !VerifyResult {

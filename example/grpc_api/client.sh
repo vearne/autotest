@@ -20,6 +20,6 @@ grpcurl --plaintext -emit-defaults -d '{"id":2, "title": "title2-2","author": "a
 grpcurl --plaintext -emit-defaults -d '{}'\
   127.0.0.1:50031 Bookstore/ListBook
 
-# list book
+# get book
 grpcurl --plaintext -emit-defaults -d '{"id":1}'\
   127.0.0.1:50031 Bookstore/GetBook

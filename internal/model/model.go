@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/vearne/autotest/internal/config"
+	"github.com/fullstorydev/grpcurl"
 	"sync"
 )
 
@@ -60,12 +60,45 @@ func (g *StateGroup) GetState(id uint64) State {
 	return g.states[id]
 }
 
-func NewStateGroup(testCases []*config.TestCaseHttp) *StateGroup {
+type IdItem interface {
+	GetID() uint64
+}
+
+func NewStateGroup() *StateGroup {
 	var g StateGroup
 	g.states = make(map[uint64]State, 0)
-	for i := 0; i < len(testCases); i++ {
-		tc := testCases[i]
-		g.states[tc.ID] = StateNotExecuted
-	}
 	return &g
+}
+
+type DescSourceCache struct {
+	sources map[string]grpcurl.DescriptorSource
+	locker  sync.RWMutex
+}
+
+func NewDescSourceCache() *DescSourceCache {
+	var cache DescSourceCache
+	cache.sources = make(map[string]grpcurl.DescriptorSource)
+	return &cache
+
+}
+func (c *DescSourceCache) Set(target string, s grpcurl.DescriptorSource) {
+	c.locker.Lock()
+	defer c.locker.Unlock()
+
+	c.sources[target] = s
+}
+
+func (c *DescSourceCache) Get(target string) (s grpcurl.DescriptorSource, ok bool) {
+	c.locker.RLock()
+	defer c.locker.RUnlock()
+
+	s, ok = c.sources[target]
+	return
+}
+
+type GrpcResp struct {
+	Code    string
+	Message string
+	Headers []string
+	Body    string
 }

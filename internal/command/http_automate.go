@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"github.com/lianggaoqiang/progress"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -71,6 +72,7 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 	})
 	var records [][]string
 	records = append(records, []string{"id", "desc", "state", "reason"})
+	fmt.Println("-------", len(tcResultList))
 	for _, item := range tcResultList {
 		reasonStr := item.Reason.String()
 		if item.Reason == model.ReasonSuccess {
@@ -83,17 +85,18 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 }
 
 func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {
-
 	workerNum = min(workerNum, 10)
 	testcases := resource.HttpTestCases[filePath]
-	slog.Info("[start]HandleSingleFile, filePath:%v, len(testcase):%v", filePath, len(testcases))
+	slog.Info("[start]HandleSingleFileHttp, filePath:%v, len(testcase):%v", filePath, len(testcases))
 
 	futureChan := make(chan executor.Future, 10)
 	pool := executor.NewFixedGPool(context.Background(), workerNum)
 	defer pool.WaitTerminate()
 
-	stateGroup := model.NewStateGroup(testcases)
-
+	stateGroup := model.NewStateGroup()
+	for _, testcase := range testcases {
+		stateGroup.SetState(testcase.GetID(), model.StateNotExecuted)
+	}
 	// producer
 	go func() {
 		for i := 0; i < len(testcases); i++ {
@@ -134,8 +137,9 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 			f, err := pool.Submit(&HttpTestCallable{testcase: tcResult.TestCase, stateGroup: stateGroup})
 			if err != nil {
 				zaplog.Error("pool.Submit", zap.Any("testcase", tcResult.TestCase), zap.Error(err))
+			} else {
+				futureChan <- f
 			}
-			futureChan <- f
 			continue
 		}
 
