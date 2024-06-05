@@ -5,3 +5,7 @@ services:
     image: woshiaotian/httpapi:latest
     ports:
       - '8080:8080'
+  grpcapi:
+    image: woshiaotian/grpcapi:latest
+    ports:
+      - '50031:50031'

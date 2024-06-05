@@ -5,41 +5,23 @@ import (
 	"github.com/vearne/zaplog"
 	"github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
-	luajson "layeh.com/gopher-json"
 	"strconv"
-	"sync"
 )
 
-var L *lua.LState
-
-/*
-Lua virtual machine is not thread-safe
-so we need LuaVMLock to protect L
-*/
-var LuaVMLock sync.Mutex
-
-func init() {
-	L = lua.NewState()
-	//defer L.Close()
-	// register json lib
-	luajson.Preload(L)
-	registerHttpRespType(L)
-}
+const luaHttpRespTypeName = "HttpResp"
 
 type HttpResp struct {
 	Code string
 	Body string
 }
 
-const luaHttpRespTypeName = "HttpResp"
-
 var httpRespMethods = map[string]lua.LGFunction{
-	"code": getSetCode,
-	"body": getSetBody,
+	"code": getSetHttpRespCode,
+	"body": getSetHttpRespBody,
 }
 
 // Getter and setter for the HttpResp#Code
-func getSetCode(L *lua.LState) int {
+func getSetHttpRespCode(L *lua.LState) int {
 	p := checkHttpResp(L)
 	if L.GetTop() == 3 {
 		p.Code = L.CheckString(2)
@@ -50,7 +32,7 @@ func getSetCode(L *lua.LState) int {
 }
 
 // Getter and setter for the HttpResp#Body
-func getSetBody(L *lua.LState) int {
+func getSetHttpRespBody(L *lua.LState) int {
 	p := checkHttpResp(L)
 	if L.GetTop() == 3 {
 		p.Body = L.CheckString(3)

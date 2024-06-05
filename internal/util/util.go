@@ -7,7 +7,7 @@ import (
 )
 
 func WriterCSV(path string, records [][]string) {
-	File, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+	File, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		slog.Error("file open failed:%v", err)
 		return

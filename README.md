@@ -99,4 +99,4 @@ autotest extract -x "//title" -j '[
 ## TODO
 * [x] 1) support utilizing the script language Lua to ascertain the conformity of HTTP responses with expectations.
 * [x] 2) output report to file
-* [ ] 3) support automating tests for gRPC protocol-based API services.
+* [x] 3) support automating tests for gRPC protocol-based API services.

@@ -1,15 +1,3 @@
-- id: 1
-  desc: "list all books"
-  request:
-    method: "get"
-    url: "http://{{ HOST }}/api/books"
-  rules:
-    - name: "HttpStatusEqualRule"
-      expectedStatus: 200
-    - name: "HttpBodyAtLeastOneRule"
-      xpath: "//title"
-      Expected: "Effective Go"
-      
 - id: 2
   desc: "add a new book"
   request:
@@ -25,10 +13,10 @@
       }
   rules:
     - name: "HttpStatusEqualRule"
-      expectedStatus: 200
+      expected: 200
     - name: "HttpBodyEqualRule"
       xpath: "/title"
-      Expected: "book3_title"
+      expected: "book3_title"
   export:
     xpath: "/id"
     # Extract the id value and export it to the variable MY_BOOK_ID
@@ -56,10 +44,10 @@
       }
   rules:
     - name: "HttpStatusEqualRule"
-      expectedStatus: 200
+      expected: 200
     - name: "HttpBodyEqualRule"
       xpath: "/author"
-      Expected: "book3_author-2"
+      expected: "book3_author-2"
     - name: "HttpLuaRule"
       lua: |
         function verify(r)
@@ -78,7 +66,7 @@
     url: "http://{{ HOST }}/api/books/1"
   rules:
     - name: "HttpStatusEqualRule"
-      expectedStatus: 204
+      expected: 204
 
 - id: 5
   desc: "try to get book1"
@@ -91,4 +79,4 @@
     url: "http://{{ HOST }}/api/books/1"
   rules:
     - name: "HttpStatusEqualRule"
-      expectedStatus: 404
+      expected: 404

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/emicklei/go-restful/v3"
 )
@@ -19,11 +20,20 @@ var books = []Book{
 	{ID: 2, Title: "Effective Go", Author: "The Go Authors"},
 }
 
+// protect books
+var globalLock sync.RWMutex
+
 func getBooksHandler(req *restful.Request, res *restful.Response) {
+	globalLock.RLock()
+	defer globalLock.RUnlock()
+
 	res.WriteAsJson(books)
 }
 
 func getBookHandler(req *restful.Request, res *restful.Response) {
+	globalLock.RLock()
+	defer globalLock.RUnlock()
+
 	id := req.PathParameter("id")
 	for _, book := range books {
 		if strconv.Itoa(book.ID) == id {
@@ -35,6 +45,9 @@ func getBookHandler(req *restful.Request, res *restful.Response) {
 }
 
 func createBookHandler(req *restful.Request, res *restful.Response) {
+	globalLock.Lock()
+	defer globalLock.Unlock()
+
 	book := new(Book)
 	err := req.ReadEntity(book)
 	if err != nil {
@@ -47,6 +60,9 @@ func createBookHandler(req *restful.Request, res *restful.Response) {
 }
 
 func updateBookHandler(req *restful.Request, res *restful.Response) {
+	globalLock.Lock()
+	defer globalLock.Unlock()
+
 	id := req.PathParameter("id")
 	for i, book := range books {
 		if strconv.Itoa(book.ID) == id {
@@ -66,6 +82,9 @@ func updateBookHandler(req *restful.Request, res *restful.Response) {
 }
 
 func deleteBookHandler(req *restful.Request, res *restful.Response) {
+	globalLock.Lock()
+	defer globalLock.Unlock()
+
 	id := req.PathParameter("id")
 	for i, book := range books {
 		if strconv.Itoa(book.ID) == id {

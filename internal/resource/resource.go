@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
+	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/rule"
 	slog "github.com/vearne/simplelog"
+	"golang.org/x/sync/singleflight"
 	"gopkg.in/yaml.v3"
 	"net/http"
 	"os"
@@ -18,7 +20,8 @@ import (
 )
 
 var GlobalConfig config.AutoTestConfig
-var HttpTestCases map[string][]*config.TestCase
+var HttpTestCases map[string][]*config.TestCaseHttp
+var GrpcTestCases map[string][]*config.TestCaseGrpc
 
 var EnvVars map[string]string
 var CustomerVars sync.Map
@@ -26,10 +29,16 @@ var CustomerVars sync.Map
 var RestyClient *resty.Client
 var TerminationFlag atomic.Bool
 
+var DescSourceCache *model.DescSourceCache
+
+var SingleFlightGroup singleflight.Group
+
 func init() {
 	EnvVars = make(map[string]string, 10)
-	HttpTestCases = make(map[string][]*config.TestCase, 10)
+	HttpTestCases = make(map[string][]*config.TestCaseHttp, 10)
+	GrpcTestCases = make(map[string][]*config.TestCaseGrpc, 10)
 	TerminationFlag.Store(false)
+	DescSourceCache = model.NewDescSourceCache()
 }
 
 func InitRestyClient(debug bool) {
@@ -64,7 +73,7 @@ func ParseConfigFile(filePath string) error {
 	// read testcase
 	// 1) http testcase
 	for idx, f := range GlobalConfig.HttpRuleFiles {
-		slog.Info("parse file:%v", f)
+		slog.Info("parse http rule file:%v", f)
 
 		b, err := readFile(f)
 		if err != nil {
@@ -72,7 +81,7 @@ func ParseConfigFile(filePath string) error {
 			return err
 		}
 
-		var testcases []*config.TestCase
+		var testcases []*config.TestCaseHttp
 		err = yaml.Unmarshal(b, &testcases)
 		if err != nil {
 			slog.Error("file:%v parse error, %v", f, err)
@@ -128,6 +137,80 @@ func ParseConfigFile(filePath string) error {
 	}
 
 	slog.Info("3) parse grpc rule files")
+	// 2) grpc testcase
+	for idx, f := range GlobalConfig.GrpcRuleFiles {
+		slog.Info("parse grpc rule:%v", f)
+
+		b, err := readFile(f)
+		if err != nil {
+			slog.Error("readFile:%v, error:%v", f, err)
+			return err
+		}
+
+		var testcases []*config.TestCaseGrpc
+		err = yaml.Unmarshal(b, &testcases)
+		if err != nil {
+			slog.Error("file:%v parse error, %v", f, err)
+			return err
+		}
+
+		for i := 0; i < len(testcases); i++ {
+			c := testcases[i]
+			c.Request.Body = strings.ReplaceAll(c.Request.Body, "\n", "")
+			c.VerifyRules = make([]rule.VerifyRuleGrpc, 0)
+			for _, r := range c.OriginRules {
+				b, _ := json.Marshal(r)
+				switch r["name"] {
+				case "GrpcCodeEqualRule":
+					var item rule.GrpcCodeEqualRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[GrpcCodeEqualRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+				case "GrpcBodyEqualRule":
+					var item rule.GrpcBodyEqualRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[GrpcBodyEqualRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+
+				case "GrpcBodyAtLeastOneRule":
+					var item rule.GrpcBodyAtLeastOneRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[GrpcBodyAtLeastOneRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+
+				case "GrpcLuaRule":
+					var item rule.GrpcLuaRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[GrpcLuaRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+				}
+			}
+
+			if c.Export != nil {
+				if len(c.Export.Type) <= 0 {
+					c.Export.Type = "string"
+				}
+			}
+		}
+
+		slog.Info("parse file:%v, len(testcases):%v", f, len(testcases))
+		absolutePath, _ := filepath.Abs(f)
+		GrpcTestCases[absolutePath] = testcases
+		GlobalConfig.GrpcRuleFiles[idx] = absolutePath
+	}
+
 	slog.Info("[end]ParseConfigFile")
 	return nil
 }

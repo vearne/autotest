@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+option go_package = "./server";
+
+service Bookstore{
+    rpc AddBook (AddBookRequest) returns (AddBookReply) {}
+    rpc DeleteBook (DeleteBookRequest) returns (DeleteBookReply) {}
+    rpc UpdateBook (UpdateBookRequest) returns (UpdateBookReply) {}
+    rpc GetBook (GetBookRequest) returns (GetBookReply) {}
+    rpc ListBook (ListBookRequest) returns (ListBookReply) {}
+}
+
+message Book {
+   sint64 id = 1;
+   string title = 2;
+   string author = 3;
+}
+
+message AddBookRequest {
+   string title = 1;
+   string author = 2;
+}
+
+message AddBookReply {
+    CodeEnum code = 1;
+    string msg = 2;
+    Book data = 3;
+}
+
+
+message DeleteBookRequest {
+    sint64 id  = 1;
+}
+
+message DeleteBookReply {
+    CodeEnum code = 1;
+    string msg = 2;
+}
+
+message UpdateBookRequest {
+    sint64 id  = 1;
+    string title = 2;
+    string author = 3;
+}
+
+message UpdateBookReply {
+    CodeEnum code = 1;
+    string msg = 2;
+    Book data = 3;
+}
+
+message GetBookRequest {
+    sint64 id  = 1;
+}
+
+message GetBookReply {
+    CodeEnum code = 1;
+    string msg = 2;
+    Book data = 3;
+}
+
+message ListBookRequest {
+}
+
+message ListBookReply {
+    CodeEnum code = 1;
+    string msg = 2;
+    repeated Book list = 3;
+}
+
+enum CodeEnum {
+    Success = 0; // success
+    ParamErr = 1; // parameter error
+    InternalErr = 2; // internal error
+    UnknowErr = 3; // unknown error
+    NoDataFound = 4; // No data found
+}

@@ -24,16 +24,20 @@ type AutoTestConfig struct {
 	GrpcRuleFiles []string `yaml:"grpc_rule_files"`
 }
 
-type TestCase struct {
+type TestCaseHttp struct {
 	ID   uint64 `yaml:"id"`
 	Desc string `yaml:"desc"`
 	// Delay for a while before executing
 	Delay       time.Duration    `yaml:"delay,omitempty"`
-	Request     Request          `yaml:"request"`
+	Request     RequestHttp      `yaml:"request"`
 	OriginRules []map[string]any `yaml:"rules" json:"-"`
 	DependOnIDs []uint64         `yaml:"dependOnIDs,omitempty"`
 	Export      *Export          `yaml:"export"`
 	VerifyRules []rule.VerifyRule
+}
+
+func (t *TestCaseHttp) GetID() uint64 {
+	return t.ID
 }
 
 type Export struct {
@@ -42,9 +46,32 @@ type Export struct {
 	Type     string `yaml:"type"`
 }
 
-type Request struct {
+type RequestHttp struct {
 	Method  string   `yaml:"method"`
 	URL     string   `yaml:"url"`
+	Headers []string `yaml:"headers"`
+	Body    string   `yaml:"body"`
+}
+
+type TestCaseGrpc struct {
+	ID   uint64 `yaml:"id"`
+	Desc string `yaml:"desc"`
+	// Delay for a while before executing
+	Delay       time.Duration    `yaml:"delay,omitempty"`
+	Request     RequestGrpc      `yaml:"request"`
+	OriginRules []map[string]any `yaml:"rules" json:"-"`
+	DependOnIDs []uint64         `yaml:"dependOnIDs,omitempty"`
+	Export      *Export          `yaml:"export"`
+	VerifyRules []rule.VerifyRuleGrpc
+}
+
+func (t *TestCaseGrpc) GetID() uint64 {
+	return t.ID
+}
+
+type RequestGrpc struct {
+	Address string   `yaml:"address"`
+	Symbol  string   `yaml:"symbol"`
 	Headers []string `yaml:"headers"`
 	Body    string   `yaml:"body"`
 }
