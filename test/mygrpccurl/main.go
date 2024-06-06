@@ -46,6 +46,9 @@ func main() {
 
 	in := strings.NewReader("{}")
 	rf, _, err := grpcurl.RequestParserAndFormatter(grpcurl.FormatJSON, descSource, in, options)
+	if err != nil {
+		slog.Error("grpcurl.RequestParserAndFormatter", "error", err)
+	}
 	err = grpcurl.InvokeRPC(ctx, descSource, cc, symbol, []string{}, handler, rf.Next)
 	if err != nil {
 		slog.Error("grpcurl.InvokeRPC", "error", err)
