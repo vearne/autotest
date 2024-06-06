@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"fmt"
 	"github.com/lianggaoqiang/progress"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -72,7 +71,6 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 	})
 	var records [][]string
 	records = append(records, []string{"id", "desc", "state", "reason"})
-	fmt.Println("-------", len(tcResultList))
 	for _, item := range tcResultList {
 		reasonStr := item.Reason.String()
 		if item.Reason == model.ReasonSuccess {
