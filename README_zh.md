@@ -3,7 +3,7 @@
 [![golang-ci](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml/badge.svg)](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml)
 
 ## 概览
-针对api服务，http、gRPC(暂时不支持)的自动化测试框架
+针对api服务，http、gRPC的自动化测试框架
 
 ## 特点:
 * 无需进行程序开发，只需要编写配置文件
