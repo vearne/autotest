@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/fullstorydev/grpcurl"
-	"github.com/golang/protobuf/proto"
+	// ignore SA1019 we have to import this because it appears in exported API
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/vearne/autotest/internal/config"
@@ -134,6 +135,14 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 	// 6. trigger remote request
 	in = strings.NewReader(reqInfo.Body)
 	rf, formatter, err = grpcurl.RequestParserAndFormatter(grpcurl.FormatJSON, descSource, in, options)
+	if err != nil {
+		zaplog.Error("GrpcTestCallable-RequestParserAndFormatter",
+			zap.Uint64("testCaseId", m.testcase.ID),
+			zap.String("address", reqInfo.Address),
+			zap.Error(err),
+		)
+		goto ERROR
+	}
 	handler = NewEventHandler(formatter)
 	err = grpcurl.InvokeRPC(rCtx, descSource, cc, reqInfo.Symbol, reqInfo.Headers, handler, rf.Next)
 	if err != nil {
