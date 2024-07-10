@@ -50,6 +50,7 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	// 3. initialize logger & RestyClient
 	slog.Info("3. Initialize logger&RestyClient")
 	loggerConfig := resource.GlobalConfig.Global.Logger
+	slog.Info("loggerConfig:FilePath:%v, level:%v", loggerConfig.FilePath, loggerConfig.Level)
 	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
 	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
 
