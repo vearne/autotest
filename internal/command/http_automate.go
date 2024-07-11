@@ -87,7 +87,7 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 	testcases := resource.HttpTestCases[filePath]
 	slog.Info("[start]HandleSingleFileHttp, filePath:%v, len(testcase):%v", filePath, len(testcases))
 
-	futureChan := make(chan executor.Future, 10)
+	futureChan := make(chan executor.Future, len(testcases))
 	pool := executor.NewFixedGPool(context.Background(), workerNum)
 	defer pool.WaitTerminate()
 
