@@ -3,6 +3,7 @@ package resource
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -111,7 +112,6 @@ func ParseConfigFile(filePath string) error {
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
-
 				case "HttpBodyAtLeastOneRule":
 					var item rule.HttpBodyAtLeastOneRule
 					err = json.Unmarshal(b, &item)
@@ -120,6 +120,16 @@ func ParseConfigFile(filePath string) error {
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
+				case "HttpLuaRule":
+					var item rule.HttpLuaRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[HttpLuaRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+				default:
+					return fmt.Errorf("unknow http-VerifyRule:%v", r["name"])
 				}
 			}
 
@@ -195,6 +205,8 @@ func ParseConfigFile(filePath string) error {
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
+				default:
+					return fmt.Errorf("unknow Grpc-VerifyRule:%v", r["name"])
 				}
 			}
 
