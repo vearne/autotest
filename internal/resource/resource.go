@@ -111,12 +111,19 @@ func ParseConfigFile(filePath string) error {
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
-
 				case "HttpBodyAtLeastOneRule":
 					var item rule.HttpBodyAtLeastOneRule
 					err = json.Unmarshal(b, &item)
 					if err != nil {
 						slog.Error("parse rule[HttpBodyAtLeastOneRule], %v", err)
+						return err
+					}
+					c.VerifyRules = append(c.VerifyRules, &item)
+				case "HttpLuaRule":
+					var item rule.HttpLuaRule
+					err = json.Unmarshal(b, &item)
+					if err != nil {
+						slog.Error("parse rule[HttpLuaRule], %v", err)
 						return err
 					}
 					c.VerifyRules = append(c.VerifyRules, &item)
