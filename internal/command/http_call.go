@@ -66,11 +66,11 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	}
 
 	// 3. render
-	zaplog.Info("before render()", zap.Uint64("testCaseId", m.testcase.ID),
+	zaplog.Debug("before render()", zap.Uint64("testCaseId", m.testcase.ID),
 		zap.Any("request", m.testcase.Request))
 	req, err := renderRequestHttp(m.testcase.Request)
 	tcResult.Request = req
-	zaplog.Info("after render()", zap.Uint64("testCaseId", m.testcase.ID),
+	zaplog.Debug("after render()", zap.Uint64("testCaseId", m.testcase.ID),
 		zap.Any("request", tcResult.Request))
 	if err != nil {
 		tcResult.State = model.StateFailed
