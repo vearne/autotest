@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -223,6 +224,15 @@ func ParseConfigFile(filePath string) error {
 		GlobalConfig.GrpcRuleFiles[idx] = absolutePath
 	}
 
+	// 3) modify report path
+	newPath := filepath.Join(GlobalConfig.Global.Report.DirPath, "autotest_"+strconv.Itoa(int(time.Now().Unix())))
+	// 创建单个文件夹
+	err = os.Mkdir("newPath", 0755)
+	if err != nil {
+		return err
+	}
+
+	GlobalConfig.Global.Report.DirPath = newPath
 	slog.Info("[end]ParseConfigFile")
 	return nil
 }
