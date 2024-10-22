@@ -11,7 +11,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/jhump/protoreflect v1.16.0
 	github.com/lianggaoqiang/progress v0.0.1
-	github.com/spf13/cast v1.6.0
+	github.com/spf13/cast v1.7.0
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v3 v3.0.0-alpha9
 	github.com/vearne/executor v0.0.3

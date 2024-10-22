@@ -92,6 +92,8 @@ autotest extract -x "//title" -j '[
  }
 ]'
 ```
+## 测试报告
+![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
 
 ## TODO
 * [x] 1) 支持使用脚本语言Lua判断HTTP response是否符合预期

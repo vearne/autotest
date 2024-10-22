@@ -95,6 +95,8 @@ autotest extract -x "//title" -j '[
  }
 ]'
 ```
+## Test Report
+![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
 
 ## TODO
 * [x] 1) support utilizing the script language Lua to ascertain the conformity of HTTP responses with expectations.

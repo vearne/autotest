@@ -1,7 +1,9 @@
 package util
 
 import (
+	"crypto/md5"
 	"encoding/csv"
+	"fmt"
 	slog "github.com/vearne/simplelog"
 	"os"
 )
@@ -23,4 +25,8 @@ func WriterCSV(path string, records [][]string) {
 	}
 	writer.Flush()
 	slog.Info("write report file:%v", path)
+}
+
+func MD5(data string) string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(data)))
 }

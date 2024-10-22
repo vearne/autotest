@@ -2,6 +2,8 @@ package command
 
 import (
 	"context"
+	"embed"
+	"fmt"
 	"github.com/lianggaoqiang/progress"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -11,6 +13,8 @@ import (
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 	"go.uber.org/zap"
+	"html/template"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -18,10 +22,21 @@ import (
 	"time"
 )
 
+//go:embed template/*.tpl
+var mytpl embed.FS
+
 type ResultInfo struct {
 	Total        int
 	SuccessCount int
 	FailedCount  int
+}
+
+type CaseShow struct {
+	ID          uint64
+	Description string
+	State       string
+	Reason      string
+	Link        string
 }
 
 func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
@@ -54,12 +69,12 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 		slog.Info("HttpTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
 		// generate report file
-		GenReportFileHttp(filePath, tcResultList)
+		GenReportFileHttp(filePath, tcResultList, info)
 	}
 	slog.Info("[end]HttpTestCases, total:%v, cost:%v", total, time.Since(begin))
 }
 
-func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResult) {
+func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResult, info *ResultInfo) {
 	filename := filepath.Base(testCasefilePath)
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
 	filename = name + ".csv"
@@ -69,8 +84,9 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 	sort.Slice(tcResultList, func(i, j int) bool {
 		return tcResultList[i].ID < tcResultList[j].ID
 	})
+	// 1. csv file
 	var records [][]string
-	records = append(records, []string{"id", "desc", "state", "reason"})
+	records = append(records, []string{"id", "description", "state", "reason"})
 	for _, item := range tcResultList {
 		reasonStr := item.Reason.String()
 		if item.Reason == model.ReasonSuccess {
@@ -80,6 +96,74 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 			item.Desc, item.State.String(), reasonStr})
 	}
 	util.WriterCSV(reportPath, records)
+	// 2. html file
+	dirName := util.MD5(reportDirPath + name)
+
+	var caseResults []CaseShow
+	for _, item := range tcResultList {
+		caseResults = append(caseResults, CaseShow{ID: item.ID, Description: item.Desc,
+			State: item.State.String(), Reason: item.Reason.String(),
+			Link: fmt.Sprintf("./%v/%v.html", dirName, item.ID)})
+	}
+
+	obj := map[string]any{
+		"info":         info,
+		"tcResultList": caseResults,
+	}
+	// index file
+	err := RenderTpl(mytpl, "template/index.tpl", obj, filepath.Join(reportDirPath, name+".html"))
+	if err != nil {
+		slog.Error("RenderTpl, %v", err)
+		return
+	}
+
+	for _, item := range tcResultList {
+		data := map[string]any{
+			"Error":      item.Error,
+			"reqDetail":  item.ReqDetail(),
+			"respDetail": item.RespDetail(),
+		}
+		err := RenderTpl(mytpl, "template/case.tpl", data,
+			filepath.Join(reportDirPath, dirName, strconv.Itoa(int(item.ID))+".html"))
+		if err != nil {
+			slog.Error("RenderTpl, %v", err)
+			return
+		}
+	}
+}
+
+func RenderTpl(fs embed.FS, key string, obj map[string]any, targetPath string) error {
+	data, err := fs.ReadFile(key)
+	if err != nil {
+		slog.Error("mytpl.ReadFile, %v", err)
+		return err
+	}
+	t, err := template.New("index").Parse(string(data))
+	if err != nil {
+		slog.Error("template Parse, %v", err)
+		return err
+	}
+	dirPath := filepath.Dir(targetPath)
+	if !pathExists(dirPath) {
+		err = os.Mkdir(dirPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	file, err := os.Create(targetPath)
+	if err != nil {
+		slog.Error("Create file, %v", err)
+		return err
+	}
+	defer file.Close()
+	return t.Execute(file, obj)
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	// os.IsNotExist 判断错误是否为文件或目录不存在
+	return !os.IsNotExist(err)
 }
 
 func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {

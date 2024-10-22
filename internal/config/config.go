@@ -17,7 +17,7 @@ type AutoTestConfig struct {
 		} `yaml:"logger"`
 		Report struct {
 			DirPath string `yaml:"dir_path"`
-		}
+		} `yaml:"report"`
 	} `yaml:"global"`
 
 	HttpRuleFiles []string `yaml:"http_rule_files"`
