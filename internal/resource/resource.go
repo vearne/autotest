@@ -77,7 +77,7 @@ func ParseConfigFile(filePath string) error {
 	for idx, f := range GlobalConfig.HttpRuleFiles {
 		slog.Info("parse http rule file:%v", f)
 
-		b, err := readFile(f)
+		b, err = readFile(f)
 		if err != nil {
 			slog.Error("readFile:%v, error:%v", f, err)
 			return err
@@ -95,7 +95,7 @@ func ParseConfigFile(filePath string) error {
 			c.Request.Body = strings.ReplaceAll(c.Request.Body, "\n", "")
 			c.VerifyRules = make([]rule.VerifyRule, 0)
 			for _, r := range c.OriginRules {
-				b, _ := json.Marshal(r)
+				b, _ = json.Marshal(r)
 				switch r["name"] {
 				case "HttpStatusEqualRule":
 					var item rule.HttpStatusEqualRule
@@ -152,7 +152,7 @@ func ParseConfigFile(filePath string) error {
 	for idx, f := range GlobalConfig.GrpcRuleFiles {
 		slog.Info("parse grpc rule:%v", f)
 
-		b, err := readFile(f)
+		b, err = readFile(f)
 		if err != nil {
 			slog.Error("readFile:%v, error:%v", f, err)
 			return err
