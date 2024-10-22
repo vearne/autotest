@@ -227,7 +227,7 @@ func ParseConfigFile(filePath string) error {
 	// 3) modify report path
 	newPath := filepath.Join(GlobalConfig.Global.Report.DirPath, "autotest_"+strconv.Itoa(int(time.Now().Unix())))
 	// 创建单个文件夹
-	err = os.Mkdir("newPath", 0755)
+	err = os.Mkdir(newPath, 0755)
 	if err != nil {
 		return err
 	}

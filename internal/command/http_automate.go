@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"embed"
+	"fmt"
 	"github.com/lianggaoqiang/progress"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -28,6 +29,14 @@ type ResultInfo struct {
 	Total        int
 	SuccessCount int
 	FailedCount  int
+}
+
+type CaseShow struct {
+	ID          uint64
+	Description string
+	State       string
+	Reason      string
+	Link        string
 }
 
 func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
@@ -89,10 +98,17 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 	util.WriterCSV(reportPath, records)
 	// 2. html file
 	dirName := util.MD5(reportDirPath + name)
+
+	var caseResults []CaseShow
+	for _, item := range tcResultList {
+		caseResults = append(caseResults, CaseShow{ID: item.ID, Description: item.Desc,
+			State: item.State.String(), Reason: item.Reason.String(),
+			Link: fmt.Sprintf("./%v/%v.html", dirName, item.ID)})
+	}
+
 	obj := map[string]any{
 		"info":         info,
-		"tcResultList": tcResultList,
-		"dirName":      dirName,
+		"tcResultList": caseResults,
 	}
 	// index file
 	err := RenderTpl(mytpl, "template/index.tpl", obj, filepath.Join(reportDirPath, name+".html"))
@@ -127,6 +143,14 @@ func RenderTpl(fs embed.FS, key string, obj map[string]any, targetPath string) e
 		slog.Error("template Parse, %v", err)
 		return err
 	}
+	dirPath := filepath.Dir(targetPath)
+	if !pathExists(dirPath) {
+		err = os.Mkdir(dirPath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
 	file, err := os.Create(targetPath)
 	if err != nil {
 		slog.Error("Create file, %v", err)
@@ -134,6 +158,12 @@ func RenderTpl(fs embed.FS, key string, obj map[string]any, targetPath string) e
 	}
 	defer file.Close()
 	return t.Execute(file, obj)
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	// os.IsNotExist 判断错误是否为文件或目录不存在
+	return !os.IsNotExist(err)
 }
 
 func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {

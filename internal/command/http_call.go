@@ -43,7 +43,7 @@ type HttpTestCaseResult struct {
 
 func (t *HttpTestCaseResult) ReqDetail() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("%v %v\n", t.Request.Method, t.Request.URL))
+	builder.WriteString(fmt.Sprintf("%v %v\n", strings.ToUpper(t.Request.Method), t.Request.URL))
 	u, _ := url.Parse(t.Request.URL)
 	builder.WriteString(fmt.Sprintf("HOST: %v\n", u.Host))
 	builder.WriteString("HEADERS:\n")
@@ -76,7 +76,7 @@ func (t *HttpTestCaseResult) RespDetail() string {
 	}
 
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("STATUS: %v %v\n", t.Response.StatusCode, t.Response.Status))
+	builder.WriteString(fmt.Sprintf("STATUS: %v\n", t.Response.Status()))
 	builder.WriteString("HEADERS:\n")
 	for key, values := range t.Response.Header() {
 		builder.WriteString(fmt.Sprintf("%v: %v\n", key, strings.Join(values, ",")))

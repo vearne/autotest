@@ -17,19 +17,15 @@
 
 <div class="container">
     <div class="section-title">~~~ REQUEST ~~~</div>
-    <pre>
-    {{ .reqDetail }}
-    </pre>
+    <pre>{{ .reqDetail }}</pre>
 </div>
 
 <div class="container">
     <div class="section-title">~~~ RESPONSE ~~~</div>
-    {{if .Error}}
-
+    {{ if .Error }}
+        {{ .Error }}
     {{else}}
-        <pre>
-        {{ .respDetail }}
-        </pre>
+        <pre>{{ .respDetail }}</pre>
     {{end}}
 </div>
 </body>

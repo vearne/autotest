@@ -45,7 +45,7 @@
 <body>
 
 <table>
-    <caption>FinishCount: {{.info.Total}}, SuccessCount: {{.info.SuccessCount}}, FailedCount: {{.info.FailedCount}}</caption>
+    <caption>Total: {{.info.Total}}, SuccessCount: {{.info.SuccessCount}}, FailedCount: {{.info.FailedCount}}</caption>
     <thead>
     <tr>
         <th>id</th>
@@ -56,13 +56,17 @@
     </tr>
     </thead>
     <tbody>
-    {{range .tcResultList}}
+    {{ range $index, $element := .tcResultList}}
         <tr>
-            <td>{{ .ID }}</td>
-            <td>{{ .Desc }}</td>
-            <td>{{ .State.String() }}</td>
-            <td>{{ .Reason.String() }}</td>
-            <td><a href="{{.dirName}}/{{ .ID }}.html">View Details</a></td>
+            <td>{{ $element.ID }}</td>
+            <td>{{ $element.Description }}</td>
+            <td>{{ $element.State }}</td>
+            <td>{{ $element.Reason }}</td>
+            <td>
+                {{ if ne $element.Reason "ReasonDependentItemFailed" }}
+                    <a href="{{ $element.Link }}">View Details</a>
+                {{ end }}
+            </td>
         </tr>
     {{end}}
     </tbody>
