@@ -4,4 +4,4 @@ LDFLAGS = -ldflags "-s -w"
 build:
 	env CGO_ENABLED=0 go build ${LDFLAGS} -o autotest ./
 xgo:
-	xgo -out=./autotest  .
+	xgo --targets=linux/amd64,darwin/amd64,darwin/arm64 -out=./autotest  .
