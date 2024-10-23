@@ -22,23 +22,6 @@ import (
 	"time"
 )
 
-//go:embed template/*.tpl
-var mytpl embed.FS
-
-type ResultInfo struct {
-	Total        int
-	SuccessCount int
-	FailedCount  int
-}
-
-type CaseShow struct {
-	ID          uint64
-	Description string
-	State       string
-	Reason      string
-	Link        string
-}
-
 func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 	total := 0
 	for _, testcases := range httpTestCases {
@@ -117,6 +100,7 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 		return
 	}
 
+	// case file
 	for _, item := range tcResultList {
 		data := map[string]any{
 			"Error":      item.Error,
