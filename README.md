@@ -11,8 +11,11 @@ Automated testing framework for api services, http, gRPC
 * No program development is required, only configuration files need to be written
 * You can specify dependencies between testcases
 * Testcases without dependencies can be executed concurrently and execute faster
-* Use xpath to extract variables for easy writing
+* Use XPath to extract variables for easy writing
 * supports importing variables from files and extracting variables from response
+
+## Something you need to know
+[XPath Syntax](https://www.w3schools.com/xml/xpath_syntax.asp)
 
 ## Install
 ### 1) use the compiled binary file
@@ -96,6 +99,9 @@ autotest extract -x "//title" -j '[
 ]'
 ```
 ## Test Report
+### Report in csv format
+![report](https://github.com/vearne/autotest/raw/main/img/result_csv.jpg)
+### Report in html format
 ![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
 
 ## TODO

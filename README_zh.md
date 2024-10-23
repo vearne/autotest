@@ -9,8 +9,11 @@
 * 无需进行程序开发，只需要编写配置文件
 * 可以指定testcase之间的依赖关系
 * 无依赖关系的testcase可以并发执行，执行速度更快
-* 使用xpath提取变量书写方便
+* 使用XPath提取变量，书写方便
 * 支持从文件中导入变量，支持从response中提取变量
+
+## 你需要了解的知识
+[XPath Syntax](https://www.w3schools.com/xml/xpath_syntax.asp)
 
 ## 安装
 ### 1) 使用编译好的bin文件
@@ -93,6 +96,10 @@ autotest extract -x "//title" -j '[
 ]'
 ```
 ## 测试报告
+### CSV格式
+![report](https://github.com/vearne/autotest/raw/main/img/result_csv.jpg)
+
+### HTML格式
 ![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
 
 ## TODO
