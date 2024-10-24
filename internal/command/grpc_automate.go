@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"github.com/lianggaoqiang/progress"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -48,7 +49,7 @@ func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) {
 		slog.Info("GrpcTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
 		// generate report file
-		GenReportFileGrpc(filePath, tcResultList)
+		GenReportFileGrpc(filePath, tcResultList, info)
 	}
 	slog.Info("[end]GrpcTestCases, total:%v, cost:%v", total, time.Since(begin))
 }
@@ -146,7 +147,7 @@ func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTe
 		FailedCount: failedCount}, tcResultList
 }
 
-func GenReportFileGrpc(testCasefilePath string, tcResultList []GrpcTestCaseResult) {
+func GenReportFileGrpc(testCasefilePath string, tcResultList []GrpcTestCaseResult, info *ResultInfo) {
 	filename := filepath.Base(testCasefilePath)
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
 	filename = name + ".csv"
@@ -156,6 +157,7 @@ func GenReportFileGrpc(testCasefilePath string, tcResultList []GrpcTestCaseResul
 	sort.Slice(tcResultList, func(i, j int) bool {
 		return tcResultList[i].ID < tcResultList[j].ID
 	})
+	// 1. csv file
 	var records [][]string
 	records = append(records, []string{"id", "desc", "state", "reason"})
 	for _, item := range tcResultList {
@@ -167,4 +169,38 @@ func GenReportFileGrpc(testCasefilePath string, tcResultList []GrpcTestCaseResul
 			item.Desc, item.State.String(), reasonStr})
 	}
 	util.WriterCSV(reportPath, records)
+	// 2. html file
+	dirName := util.MD5(reportDirPath + name)
+
+	var caseResults []CaseShow
+	for _, item := range tcResultList {
+		caseResults = append(caseResults, CaseShow{ID: item.ID, Description: item.Desc,
+			State: item.State.String(), Reason: item.Reason.String(),
+			Link: fmt.Sprintf("./%v/%v.html", dirName, item.ID)})
+	}
+	obj := map[string]any{
+		"info":         info,
+		"tcResultList": caseResults,
+	}
+	// index file
+	err := RenderTpl(mytpl, "template/index.tpl", obj, filepath.Join(reportDirPath, name+".html"))
+	if err != nil {
+		slog.Error("RenderTpl, %v", err)
+		return
+	}
+
+	// case file
+	for _, item := range tcResultList {
+		data := map[string]any{
+			"Error":      item.Error,
+			"reqDetail":  item.ReqDetail(),
+			"respDetail": item.RespDetail(),
+		}
+		err := RenderTpl(mytpl, "template/case.tpl", data,
+			filepath.Join(reportDirPath, dirName, strconv.Itoa(int(item.ID))+".html"))
+		if err != nil {
+			slog.Error("RenderTpl, %v", err)
+			return
+		}
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fullstorydev/grpcurl"
+
 	// ignore SA1019 we have to import this because it appears in exported API
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/jhump/protoreflect/desc"
@@ -31,6 +32,38 @@ type GrpcTestCaseResult struct {
 	Request   config.RequestGrpc
 	TestCase  *config.TestCaseGrpc
 	KeyValues map[string]any
+	Error     error
+	Response  *model.GrpcResp
+}
+
+func (t *GrpcTestCaseResult) ReqDetail() string {
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("ADDRESS: %v\n", t.Request.Address))
+	builder.WriteString(fmt.Sprintf("SYMBOL: %v\n", t.Request.Symbol))
+	builder.WriteString("HEADERS:\n")
+	for _, item := range t.Request.Headers {
+		builder.WriteString(fmt.Sprintf("%v\n", item))
+	}
+	builder.WriteString("BODY:\n")
+	builder.WriteString(fmt.Sprintf("%v\n", t.Request.Body))
+	return builder.String()
+}
+
+func (t *GrpcTestCaseResult) RespDetail() string {
+	if t.Response == nil {
+		return ""
+	}
+
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("GRPC.CODE: %v\n", t.Response.Code))
+	builder.WriteString(fmt.Sprintf("GRPC.MESSAGE %v\n", t.Response.Message))
+	builder.WriteString("HEADERS:\n")
+	for _, item := range t.Response.Headers {
+		builder.WriteString(fmt.Sprintf("%v\n", item))
+	}
+	builder.WriteString("BODY:\n")
+	builder.WriteString(fmt.Sprintf("%v\n", t.Response.Body))
+	return builder.String()
 }
 
 type GrpcTestCallable struct {
@@ -40,7 +73,6 @@ type GrpcTestCallable struct {
 
 func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 	r := executor.GPResult{}
-	var dialErr error
 	var cc *grpc.ClientConn
 	var rf grpcurl.RequestParser
 	var formatter grpcurl.Formatter
@@ -94,6 +126,7 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 	if err != nil {
 		tcResult.State = model.StateFailed
 		tcResult.Reason = model.ReasonTemplateRenderError
+		tcResult.Error = err
 		r.Value = tcResult
 		r.Err = err
 		return &r
@@ -117,12 +150,12 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 		goto ERROR
 	}
 
-	cc, dialErr = dial(reqInfo.Address)
-	if dialErr != nil {
+	cc, err = dial(reqInfo.Address)
+	if err != nil {
 		zaplog.Error("GrpcTestCallable-dial",
 			zap.Uint64("testCaseId", m.testcase.ID),
 			zap.String("address", reqInfo.Address),
-			zap.Error(dialErr),
+			zap.Error(err),
 		)
 		goto ERROR
 	}
@@ -153,6 +186,8 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 		)
 		goto ERROR
 	}
+
+	tcResult.Response = &handler.resp
 
 	if resource.GlobalConfig.Global.Debug {
 		debugPrint(reqInfo, handler.resp)
@@ -187,6 +222,7 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 ERROR:
 	tcResult.State = model.StateFailed
 	tcResult.Reason = model.ReasonRequestFailed
+	tcResult.Error = err
 	r.Value = tcResult
 	r.Err = err
 	return &r
@@ -237,6 +273,7 @@ func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.Descr
 	})
 	if err != nil {
 		zaplog.Error("getDescSourceWitchCache", zap.Error(err))
+		return nil, err
 	}
 
 	s = v.(grpcurl.DescriptorSource)

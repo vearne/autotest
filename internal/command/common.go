@@ -1,6 +1,7 @@
 package command
 
 import (
+	"embed"
 	"fmt"
 	"github.com/antchfx/jsonquery"
 	"github.com/flosch/pongo2/v6"
@@ -9,6 +10,23 @@ import (
 	"github.com/vearne/autotest/internal/resource"
 	"strings"
 )
+
+//go:embed template/*.tpl
+var mytpl embed.FS
+
+type ResultInfo struct {
+	Total        int
+	SuccessCount int
+	FailedCount  int
+}
+
+type CaseShow struct {
+	ID          uint64
+	Description string
+	State       string
+	Reason      string
+	Link        string
+}
 
 func templateRender(tplStr string) (string, error) {
 	// Compile the template first (i. e. creating the AST)
