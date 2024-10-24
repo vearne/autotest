@@ -20,7 +20,7 @@ global:
 http_rule_files:
   - "./config_files/my_http_api.yml"
 
-#grpc_rule_files:
+grpc_rule_files:
 #  - "./config_files/my_grpc_api.yml"
 
   

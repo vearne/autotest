@@ -187,6 +187,8 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 		goto ERROR
 	}
 
+	tcResult.Response = &handler.resp
+
 	if resource.GlobalConfig.Global.Debug {
 		debugPrint(reqInfo, handler.resp)
 	}
@@ -271,6 +273,7 @@ func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.Descr
 	})
 	if err != nil {
 		zaplog.Error("getDescSourceWitchCache", zap.Error(err))
+		return nil, err
 	}
 
 	s = v.(grpcurl.DescriptorSource)
