@@ -53,6 +53,9 @@
         function verify(r)
           local json = require "json";
           local book = json.decode(r:body());
+          print("book.author:", book.author);
+          print("---1---", 10);
+          print("---2---", 20);
           return book.title == "book3_title" and book.author == "book3_author-2";
         end
  

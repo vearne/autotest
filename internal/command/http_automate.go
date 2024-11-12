@@ -195,7 +195,12 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 	for future := range futureChan {
 		gResult := future.Get()
 		tcResult := gResult.Value.(HttpTestCaseResult)
-		zaplog.Debug("future.Get", zap.Any("tcResult", tcResult))
+		zaplog.Debug("future.Get",
+			zap.Uint64("ID", tcResult.ID),
+			zap.String("Desc", tcResult.Desc),
+			zap.Any("request", tcResult.Request),
+			zap.Any("response", tcResult.Response),
+		)
 
 		if tcResult.State == model.StateNotExecuted {
 			time.Sleep(200 * time.Millisecond)
@@ -230,6 +235,8 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 		}
 
 		finishCount++
+		// process bar will override this line.
+		fmt.Println()
 		//nolint: errcheck
 		bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
 		if finishCount >= len(testcases) {

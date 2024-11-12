@@ -135,6 +135,8 @@ func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTe
 		}
 
 		finishCount++
+		// process bar will override this line.
+		fmt.Println()
 		//nolint: errcheck
 		bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
 		if finishCount >= len(testcases) {
