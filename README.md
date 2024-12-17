@@ -5,7 +5,7 @@
 * [中文 README](https://github.com/vearne/autotest/blob/master/README_zh.md)
 
 ## Overview
-Automated testing framework for api services, http, gRPC
+An automated testing framework for API services, such as HTTP and gRPC.
 
 ## Features
 * No program development is required, only configuration files need to be written
