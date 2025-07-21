@@ -24,7 +24,6 @@ func WriterCSV(path string, records [][]string) {
 		return
 	}
 	writer.Flush()
-	slog.Info("write report file:%v", path)
 }
 
 func MD5(data string) string {

@@ -205,4 +205,5 @@ func GenReportFileGrpc(testCasefilePath string, tcResultList []GrpcTestCaseResul
 			return
 		}
 	}
+	slog.Info("write report:%v", reportDirPath)
 }

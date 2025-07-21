@@ -114,6 +114,7 @@ func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResul
 			return
 		}
 	}
+	slog.Info("write report:%v", reportDirPath)
 }
 
 func RenderTpl(fs embed.FS, key string, obj map[string]any, targetPath string) error {
