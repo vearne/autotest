@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/vearne/autotest/internal/luavm"
+	lua "github.com/yuin/gopher-lua"
 
 	"github.com/fullstorydev/grpcurl"
 
@@ -12,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
-	"github.com/jhump/protoreflect/desc"
+	"github.com/golang/protobuf/proto"   //nolint:staticcheck
+	"github.com/jhump/protoreflect/desc" //nolint:staticcheck
 	"github.com/jhump/protoreflect/grpcreflect"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -254,8 +255,9 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 		
 		return body();
 	`
+		var value lua.LValue
 		zaplog.Info("renderRequestGrpc", zap.String("source", source))
-		value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+		value, err = luavm.ExecuteLuaWithGlobals(nil, source)
 		if err != nil {
 			zaplog.Error("renderRequestGrpc-luaBody",
 				zap.String("LuaStr", req.LuaBody),

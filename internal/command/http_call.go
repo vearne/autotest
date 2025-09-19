@@ -10,6 +10,7 @@ import (
 	"github.com/vearne/autotest/internal/resource"
 	"github.com/vearne/executor"
 	"github.com/vearne/zaplog"
+	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 	"net/url"
 	"strings"
@@ -244,7 +245,8 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 		return body();
 	`
 		zaplog.Info("renderRequestHttp", zap.String("source", source))
-		value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+		var value lua.LValue
+		value, err = luavm.ExecuteLuaWithGlobals(nil, source)
 		if err != nil {
 			zaplog.Error("renderRequestHttp-luaBody",
 				zap.String("LuaStr", req.LuaBody),
