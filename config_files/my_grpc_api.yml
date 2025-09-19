@@ -142,3 +142,35 @@
           local body = json.decode(r:body());
           return body.data.title == "title2-2" and body.data.author == "author2-2";
         end
+        
+- id: 8
+  desc: "add new book"
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/AddBook"
+    luaBody: |
+      function body()
+        local json = require "json";
+        -- 今天 23:59:59 的字符串
+        local today235959 = os.date("%Y%m%d235959");
+        local data = {
+          title   = "book4_title-" .. today235959,
+          author  = "book4_author"
+        };
+        return json.encode(data);
+      end
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
+    - name: "GrpcLuaRule"
+      lua: |
+        function verify(r)
+          local json = require "json";
+          local body = json.decode(r:body());
+          local today235959 = os.date("%Y%m%d235959");
+          local title = "book4_title-" .. today235959;
+          return body.data.title == title;
+        end

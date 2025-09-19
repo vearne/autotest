@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
+	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/resource"
 	"github.com/vearne/executor"
@@ -236,9 +237,26 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 	}
 
 	// body
-	req.Body, err = templateRender(req.Body)
-	if err != nil {
-		return req, err
+	if len(req.LuaBody) > 0 {
+		source := req.LuaBody +
+			`
+		
+		return body();
+	`
+		zaplog.Info("renderRequestHttp", zap.String("source", source))
+		value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+		if err != nil {
+			zaplog.Error("renderRequestHttp-luaBody",
+				zap.String("LuaStr", req.LuaBody),
+				zap.Error(err))
+			return req, err
+		}
+		req.Body = value.String()
+	} else {
+		req.Body, err = templateRender(req.Body)
+		if err != nil {
+			return req, err
+		}
 	}
 
 	return req, nil

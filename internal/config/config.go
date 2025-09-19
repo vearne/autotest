@@ -51,6 +51,7 @@ type RequestHttp struct {
 	URL     string   `yaml:"url"`
 	Headers []string `yaml:"headers"`
 	Body    string   `yaml:"body"`
+	LuaBody string   `yaml:"luaBody"`
 }
 
 type TestCaseGrpc struct {
@@ -74,4 +75,5 @@ type RequestGrpc struct {
 	Symbol  string   `yaml:"symbol"`
 	Headers []string `yaml:"headers"`
 	Body    string   `yaml:"body"`
+	LuaBody string   `yaml:"luaBody"`
 }

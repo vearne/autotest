@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/zaplog"
 	"github.com/yuin/gopher-lua"
@@ -75,15 +76,18 @@ func (r *GrpcLuaRule) Name() string {
 }
 
 func (r *GrpcLuaRule) Verify(resp *model.GrpcResp) bool {
-	L.SetGlobal("codeStr", lua.LString(resp.Code))
-	L.SetGlobal("bodyStr", lua.LString(resp.Body))
+	globals := map[string]lua.LValue{
+		"codeStr": lua.LString(resp.Code),
+		"bodyStr": lua.LString(resp.Body),
+	}
 
 	source := r.LuaStr +
 		`
 	r = GrpcResp.new(codeStr, bodyStr);
 	return verify(r);
 `
-	if err := runLuaStr(source); err != nil {
+	value, err := luavm.ExecuteLuaWithGlobals(globals, source)
+	if err != nil {
 		zaplog.Error("GrpcLuaRule-Verify",
 			zap.String("code", resp.Code),
 			zap.String("body", resp.Body),
@@ -91,6 +95,5 @@ func (r *GrpcLuaRule) Verify(resp *model.GrpcResp) bool {
 			zap.Error(err))
 		return false
 	}
-	lv := L.Get(-1)
-	return lv == lua.LTrue
+	return value == lua.LTrue
 }

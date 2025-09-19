@@ -3,9 +3,15 @@ package command
 import (
 	"context"
 	"fmt"
+	"github.com/vearne/autotest/internal/luavm"
+
 	"github.com/fullstorydev/grpcurl"
 
 	// ignore SA1019 we have to import this because it appears in exported API
+	"os"
+	"strings"
+	"time"
+
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
@@ -18,9 +24,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"os"
-	"strings"
-	"time"
 )
 
 type GrpcTestCaseResult struct {
@@ -245,9 +248,26 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 	}
 
 	// body
-	req.Body, err = templateRender(req.Body)
-	if err != nil {
-		return req, err
+	if len(req.LuaBody) > 0 {
+		source := req.LuaBody +
+			`
+		
+		return body();
+	`
+		zaplog.Info("renderRequestGrpc", zap.String("source", source))
+		value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+		if err != nil {
+			zaplog.Error("renderRequestGrpc-luaBody",
+				zap.String("LuaStr", req.LuaBody),
+				zap.Error(err))
+			return req, err
+		}
+		req.Body = value.String()
+	} else {
+		req.Body, err = templateRender(req.Body)
+		if err != nil {
+			return req, err
+		}
 	}
 
 	return req, nil
@@ -345,6 +365,8 @@ func (m *EventHandler) OnReceiveHeaders(md metadata.MD) {
 }
 
 func (m *EventHandler) OnReceiveResponse(msg proto.Message) {
+	// Convert the message to the format expected by the formatter
+	// The formatter expects github.com/golang/protobuf/proto.Message
 	m.resp.Body, _ = m.formatter(msg)
 }
 
