@@ -2,6 +2,7 @@ package rule
 
 import (
 	"github.com/go-resty/resty/v2"
+	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/zaplog"
 	"github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
@@ -81,15 +82,15 @@ func (r *HttpLuaRule) Name() string {
 }
 
 func (r *HttpLuaRule) Verify(resp *resty.Response) bool {
-	L.SetGlobal("codeStr", lua.LString(strconv.Itoa(resp.StatusCode())))
-	L.SetGlobal("bodyStr", lua.LString(resp.String()))
+	luavm.SetGlobal("codeStr", lua.LString(strconv.Itoa(resp.StatusCode())))
+	luavm.SetGlobal("bodyStr", lua.LString(resp.String()))
 
 	source := r.LuaStr +
 		`
 r = HttpResp.new(codeStr, bodyStr);
 return verify(r);
 `
-	if err := runLuaStr(source); err != nil {
+	if err := luavm.RunLuaStr(source); err != nil {
 		zaplog.Error("HttpLuaRule-Verify",
 			zap.Int("status", resp.StatusCode()),
 			zap.String("body", resp.String()),
@@ -97,13 +98,6 @@ return verify(r);
 			zap.Error(err))
 		return false
 	}
-	lv := L.Get(-1)
+	lv := luavm.Get(-1)
 	return lv == lua.LTrue
-}
-
-func runLuaStr(source string) error {
-	LuaVMLock.Lock()
-	defer LuaVMLock.Unlock()
-
-	return L.DoString(source)
 }

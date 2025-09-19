@@ -23,7 +23,7 @@
     exportTo: "MY_BOOK_ID"
     # default is string, optional value: integer | string | float
     type: integer
-    
+
 - id: 3
   desc: "modify the book3"
   # Depends on TestCase2
@@ -58,7 +58,7 @@
           print("---2---", 20);
           return book.title == "book3_title" and book.author == "book3_author-2";
         end
- 
+
 - id: 4
   desc: "delete the book1"
   request:
@@ -83,3 +83,41 @@
   rules:
     - name: "HttpStatusEqualRule"
       expected: 404
+
+- id: 6
+  desc: "add a new book"
+  request:
+    # optional
+    method: "post"
+    url: "http://{{ HOST }}/api/books"
+    headers:
+      - "Content-Type: application/json"
+    luaBody: |
+      function body()
+        local json = require "json";
+        -- 今天 23:59:59 的字符串
+        local today235959 = os.date("%Y%m%d235959");
+        local data = {
+          title   = "book4_title-" .. today235959,
+          author  = "book4_author"
+        };
+        return json.encode(data);
+      end
+  rules:
+    - name: "HttpStatusEqualRule"
+      expected: 200
+    - name: "HttpBodyEqualRule"
+      xpath: "/author"
+      expected: "book4_author"
+    - name: "HttpLuaRule"
+      lua: |
+        function verify(r)
+          local json = require "json";
+          local book = json.decode(r:body());
+          print("book.title:", book.title);
+          print("---1---", 10);
+          print("---2---", 20);
+          local today235959 = os.date("%Y%m%d235959");
+          local title = "book4_title-" .. today235959;
+          return book.title == title;
+        end

@@ -2,20 +2,20 @@
 
 [![golang-ci](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml/badge.svg)](https://github.com/vearne/autotest/actions/workflows/golang-ci.yml)
 
-## 概览
+## 1.概览
 针对api服务，http、gRPC的自动化测试框架
 
-## 特点:
+## 2.特点:
 * 无需进行程序开发，只需要编写配置文件
 * 可以指定testcase之间的依赖关系
 * 无依赖关系的testcase可以并发执行，执行速度更快
 * 使用XPath提取变量，书写方便
 * 支持从文件中导入变量，支持从response中提取变量
 
-## 你需要了解的知识
+## 3.你需要了解的知识
 [XPath Syntax](https://www.w3schools.com/xml/xpath_syntax.asp)
 
-## 安装
+## 4.安装
 ### 1) 使用编译好的bin文件
 [release](https://github.com/vearne/autotest/releases)
 
@@ -29,7 +29,7 @@ make build
 go install github.com/vearne/autotest@latest
 ```
 
-## 用法
+## 5.用法
 ### 1) 检查配置文件
 ``` 
 autotest test --config-file=${CONFIG_FILE}
@@ -45,7 +45,7 @@ autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 autotest extract --xpath=${XPATH} --json=${JSON}
 ```
 
-## 示例
+## 6.示例
 ### 1) 启动一个伪造的http api服务
 ```
 cd ./docker-compose
@@ -95,17 +95,62 @@ autotest extract -x "//title" -j '[
  }
 ]'
 ```
-## 测试报告
+## 7.测试报告
 ### CSV格式
 ![report](https://github.com/vearne/autotest/raw/main/img/result_csv.jpg)
 
 ### HTML格式
 ![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
 
-## TODO
-* [x] 1) 支持使用脚本语言Lua判断HTTP response是否符合预期
-* [x] 2) 输出report到文件中
-* [x] 3) 支持对gRPC协议的API服务进行自动化测试
-
+## 8.高级用法
+某些场景，我们可能需要使用lua脚本来生成请求的body，或者用脚本来验证响应的body是否符合预期
+```
+- id: 6
+  desc: "add a new book"
+  request:
+    # optional
+    method: "post"
+    url: "http://{{ HOST }}/api/books"
+    headers:
+      - "Content-Type: application/json"
+    luaBody: |
+      function body()
+        local json = require "json";
+        -- 今天 23:59:59 的字符串
+        local today235959 = os.date("%Y%m%d235959");
+        local data = {
+          title   = "book4_title-" .. today235959,
+          author  = "book4_author"
+        };
+        return json.encode(data);
+      end
+  rules:
+    - name: "HttpStatusEqualRule"
+      expected: 200
+    - name: "HttpBodyEqualRule"
+      xpath: "/author"
+      expected: "book4_author"
+    - name: "HttpLuaRule"
+      lua: |
+        function verify(r)
+          local json = require "json";
+          local book = json.decode(r:body());
+          print("book.title:", book.title);
+          print("---1---", 10);
+          print("---2---", 20);
+          local today235959 = os.date("%Y%m%d235959");
+          local title = "book4_title-" .. today235959;
+          return book.title == title;
+        end
+```
+**注意**: 
+* luaBody脚本中函数形式是固定的
+```lua
+function body()
+```
+* HttpLuaRule脚本中函数形式也是是固定的
+```
+function verify(r)
+```
 
 

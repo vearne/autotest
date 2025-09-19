@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/antchfx/jsonquery"
 	"github.com/antchfx/xpath"
 	"github.com/urfave/cli/v3"
@@ -102,6 +103,13 @@ func CheckTestCaseHttp() error {
 	for filePath, testcases := range resource.HttpTestCases {
 		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
 		for _, tc := range testcases {
+			// 1.1 body and luaBody cannot have values at the same time
+			if len(tc.Request.Body) > 0 && len(tc.Request.LuaBody) > 0 {
+				slog.Error("request error, testCaseId:%v", tc.ID)
+				return fmt.Errorf("body and luaBody cannot have values at the same time, testCaseId:%v", tc.ID)
+			}
+
+			// 1.2 verify rule
 			for _, r := range tc.VerifyRules {
 				switch r.Name() {
 				case "HttpBodyEqualRule":
@@ -171,6 +179,13 @@ func CheckTestCaseGrpc() error {
 	for filePath, testcases := range resource.GrpcTestCases {
 		slog.Info("filePath:%v, len(testcases):%v", filePath, len(testcases))
 		for _, tc := range testcases {
+			// 1.1 body and luaBody cannot have values at the same time
+			if len(tc.Request.Body) > 0 && len(tc.Request.LuaBody) > 0 {
+				slog.Error("request error, testCaseId:%v", tc.ID)
+				return fmt.Errorf("body and luaBody cannot have values at the same time, testCaseId:%v", tc.ID)
+			}
+
+			// 1.2 verify rule
 			for _, r := range tc.VerifyRules {
 				switch r.Name() {
 				case "GrpcBodyEqualRule":

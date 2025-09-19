@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"github.com/vearne/autotest/internal/luavm"
 
 	"github.com/fullstorydev/grpcurl"
 
@@ -247,9 +248,26 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 	}
 
 	// body
-	req.Body, err = templateRender(req.Body)
-	if err != nil {
-		return req, err
+	if len(req.LuaBody) > 0 {
+		source := req.LuaBody +
+			`
+		
+		return body();
+	`
+		zaplog.Info("renderRequestGrpc", zap.String("source", source))
+		if err = luavm.RunLuaStr(source); err != nil {
+			zaplog.Error("renderRequestGrpc-luaBody",
+				zap.String("LuaStr", req.LuaBody),
+				zap.Error(err))
+			return req, err
+		}
+		lv := luavm.Get(-1)
+		req.Body = lv.String()
+	} else {
+		req.Body, err = templateRender(req.Body)
+		if err != nil {
+			return req, err
+		}
 	}
 
 	return req, nil

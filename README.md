@@ -4,20 +4,20 @@
 
 * [中文 README](https://github.com/vearne/autotest/blob/master/README_zh.md)
 
-## Overview
+## 1.Overview
 An automated testing framework for API services, such as HTTP and gRPC.
 
-## Features
+## 2.Features
 * No program development is required, only configuration files need to be written
 * You can specify dependencies between testcases
 * Testcases without dependencies can be executed concurrently and execute faster
 * Use XPath to extract variables for easy writing
 * supports importing variables from files and extracting variables from response
 
-## Something you need to know
+## 3.Something you need to know
 [XPath Syntax](https://www.w3schools.com/xml/xpath_syntax.asp)
 
-## Install
+## 4.Install
 ### 1) use the compiled binary file
 [release](https://github.com/vearne/autotest/releases)
 
@@ -32,7 +32,7 @@ go install github.com/vearne/autotest@latest
 ```
 
 
-## Usage
+## 5.Usage
 ### 1) check configuration file
 ``` 
 autotest test --config-file=${CONFIG_FILE}
@@ -47,7 +47,7 @@ autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
 autotest extract --xpath=${XPATH} --json=${JSON}
 ```
 
-## Example
+## 6.Example
 ### 1) start a fake http api service
 ```
 cd ./docker-compose
@@ -98,13 +98,60 @@ autotest extract -x "//title" -j '[
  }
 ]'
 ```
-## Test Report
+## 7.Test Report
 ### Report in csv format
 ![report](https://github.com/vearne/autotest/raw/main/img/result_csv.jpg)
 ### Report in html format
 ![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
 
-## TODO
-* [x] 1) support utilizing the script language Lua to ascertain the conformity of HTTP responses with expectations.
-* [x] 2) output report to file
-* [x] 3) support automating tests for gRPC protocol-based API services.
+## 8.Advanced Usage
+In certain scenarios, we may need to use Lua scripts to generate the request body 
+or to verify whether the response body meets expectations
+```
+- id: 6
+  desc: "add a new book"
+  request:
+    # optional
+    method: "post"
+    url: "http://{{ HOST }}/api/books"
+    headers:
+      - "Content-Type: application/json"
+    luaBody: |
+      function body()
+        local json = require "json";
+        -- the string representation of today's date at 23:59:59.
+        local today235959 = os.date("%Y%m%d235959");
+        local data = {
+          title   = "book4_title-" .. today235959,
+          author  = "book4_author"
+        };
+        return json.encode(data);
+      end
+  rules:
+    - name: "HttpStatusEqualRule"
+      expected: 200
+    - name: "HttpBodyEqualRule"
+      xpath: "/author"
+      expected: "book4_author"
+    - name: "HttpLuaRule"
+      lua: |
+        function verify(r)
+          local json = require "json";
+          local book = json.decode(r:body());
+          print("book.title:", book.title);
+          print("---1---", 10);
+          print("---2---", 20);
+          local today235959 = os.date("%Y%m%d235959");
+          local title = "book4_title-" .. today235959;
+          return book.title == title;
+        end
+```
+**Notice**:
+* In LuaBody scripts, the form of functions is fixed.
+```lua
+function body()
+```
+* In HttpLuaRule.lua scripts, the form of functions is fixed too.
+```
+function verify(r)
+```
