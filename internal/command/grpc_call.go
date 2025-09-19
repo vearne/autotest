@@ -255,14 +255,14 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 		return body();
 	`
 		zaplog.Info("renderRequestGrpc", zap.String("source", source))
-		if err = luavm.RunLuaStr(source); err != nil {
+		value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+		if err != nil {
 			zaplog.Error("renderRequestGrpc-luaBody",
 				zap.String("LuaStr", req.LuaBody),
 				zap.Error(err))
 			return req, err
 		}
-		lv := luavm.Get(-1)
-		req.Body = lv.String()
+		req.Body = value.String()
 	} else {
 		req.Body, err = templateRender(req.Body)
 		if err != nil {

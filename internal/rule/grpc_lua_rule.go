@@ -76,15 +76,18 @@ func (r *GrpcLuaRule) Name() string {
 }
 
 func (r *GrpcLuaRule) Verify(resp *model.GrpcResp) bool {
-	luavm.SetGlobal("codeStr", lua.LString(resp.Code))
-	luavm.SetGlobal("bodyStr", lua.LString(resp.Body))
+	globals := map[string]lua.LValue{
+		"codeStr": lua.LString(resp.Code),
+		"bodyStr": lua.LString(resp.Body),
+	}
 
 	source := r.LuaStr +
 		`
 	r = GrpcResp.new(codeStr, bodyStr);
 	return verify(r);
 `
-	if err := luavm.RunLuaStr(source); err != nil {
+	value, err := luavm.ExecuteLuaWithGlobals(globals, source)
+	if err != nil {
 		zaplog.Error("GrpcLuaRule-Verify",
 			zap.String("code", resp.Code),
 			zap.String("body", resp.Body),
@@ -92,6 +95,5 @@ func (r *GrpcLuaRule) Verify(resp *model.GrpcResp) bool {
 			zap.Error(err))
 		return false
 	}
-	lv := luavm.Get(-1)
-	return lv == lua.LTrue
+	return value == lua.LTrue
 }

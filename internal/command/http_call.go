@@ -244,14 +244,14 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 		return body();
 	`
 		zaplog.Info("renderRequestHttp", zap.String("source", source))
-		if err = luavm.RunLuaStr(source); err != nil {
+		value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+		if err != nil {
 			zaplog.Error("renderRequestHttp-luaBody",
 				zap.String("LuaStr", req.LuaBody),
 				zap.Error(err))
 			return req, err
 		}
-		lv := luavm.Get(-1)
-		req.Body = lv.String()
+		req.Body = value.String()
 	} else {
 		req.Body, err = templateRender(req.Body)
 		if err != nil {

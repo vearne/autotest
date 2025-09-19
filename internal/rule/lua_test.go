@@ -1,13 +1,14 @@
-package luavm
+package rule
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/vearne/autotest/internal/luavm"
 	lua "github.com/yuin/gopher-lua"
 	"testing"
 )
 
 func TestLua(t *testing.T) {
-	if err := RunLuaStr(`
+	source := `
 		function verify(r)
 			local json = require "json";
 			local car = json.decode(r:body());
@@ -15,13 +16,14 @@ func TestLua(t *testing.T) {
 		end
         r = HttpResp.new("200", "{\"age\": 10,\"name\": \"buick\"}")
 		return verify(r)
-    `); err != nil {
+    `
+	value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+	if err != nil {
 		panic(err)
 	}
 
 	result := false
-	lv := L.Get(-1)
-	if lv == lua.LTrue {
+	if value == lua.LTrue {
 		result = true
 	}
 	assert.True(t, result)

@@ -82,15 +82,17 @@ func (r *HttpLuaRule) Name() string {
 }
 
 func (r *HttpLuaRule) Verify(resp *resty.Response) bool {
-	luavm.SetGlobal("codeStr", lua.LString(strconv.Itoa(resp.StatusCode())))
-	luavm.SetGlobal("bodyStr", lua.LString(resp.String()))
-
+	globals := map[string]lua.LValue{
+		"codeStr": lua.LString(strconv.Itoa(resp.StatusCode())),
+		"bodyStr": lua.LString(resp.String()),
+	}
 	source := r.LuaStr +
 		`
 r = HttpResp.new(codeStr, bodyStr);
 return verify(r);
 `
-	if err := luavm.RunLuaStr(source); err != nil {
+	value, err := luavm.ExecuteLuaWithGlobals(globals, source)
+	if err != nil {
 		zaplog.Error("HttpLuaRule-Verify",
 			zap.Int("status", resp.StatusCode()),
 			zap.String("body", resp.String()),
@@ -98,6 +100,5 @@ return verify(r);
 			zap.Error(err))
 		return false
 	}
-	lv := luavm.Get(-1)
-	return lv == lua.LTrue
+	return value == lua.LTrue
 }

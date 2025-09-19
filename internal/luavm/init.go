@@ -1,9 +1,10 @@
 package luavm
 
 import (
+	"sync"
+
 	lua "github.com/yuin/gopher-lua"
 	luajson "layeh.com/gopher-json"
-	"sync"
 )
 
 var L *lua.LState
@@ -16,22 +17,34 @@ var LuaVMLock sync.Mutex
 
 func init() {
 	L = lua.NewState()
-	//defer L.Close()
-	// register json lib
 	luajson.Preload(L)
 }
 
-func RunLuaStr(source string) error {
+func ExecuteLuaWithGlobals(globals map[string]lua.LValue, source string) (lua.LValue, error) {
 	LuaVMLock.Lock()
 	defer LuaVMLock.Unlock()
 
-	return L.DoString(source)
-}
+	// 记录执行前的栈大小
+	stackSizeBefore := L.GetTop()
 
-func SetGlobal(name string, value lua.LValue) {
-	L.SetGlobal(name, value)
-}
+	// 原子性地设置所有全局变量
+	for name, value := range globals {
+		L.SetGlobal(name, value)
+	}
 
-func Get(idx int) lua.LValue {
-	return L.Get(idx)
+	// 执行Lua代码
+	err := L.DoString(source)
+	if err != nil {
+		// 出错时也要清理栈
+		L.SetTop(stackSizeBefore)
+		return nil, err
+	}
+
+	// 获取结果
+	result := L.Get(-1)
+
+	// 清理栈，恢复到执行前的大小
+	L.SetTop(stackSizeBefore)
+
+	return result, nil
 }
