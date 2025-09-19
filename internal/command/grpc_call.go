@@ -3,9 +3,14 @@ package command
 import (
 	"context"
 	"fmt"
+
 	"github.com/fullstorydev/grpcurl"
 
 	// ignore SA1019 we have to import this because it appears in exported API
+	"os"
+	"strings"
+	"time"
+
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
@@ -18,9 +23,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"os"
-	"strings"
-	"time"
 )
 
 type GrpcTestCaseResult struct {
@@ -345,6 +347,8 @@ func (m *EventHandler) OnReceiveHeaders(md metadata.MD) {
 }
 
 func (m *EventHandler) OnReceiveResponse(msg proto.Message) {
+	// Convert the message to the format expected by the formatter
+	// The formatter expects github.com/golang/protobuf/proto.Message
 	m.resp.Body, _ = m.formatter(msg)
 }
 

@@ -3,16 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
+	"strings"
+
 	"github.com/fullstorydev/grpcurl"
 	"github.com/golang/protobuf/proto"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
-	//"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"log/slog"
-	"strings"
 )
 
 func dial(target string) *grpc.ClientConn {
