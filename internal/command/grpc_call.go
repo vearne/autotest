@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+
 	"github.com/vearne/autotest/internal/luavm"
 	lua "github.com/yuin/gopher-lua"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/resource"
 	"github.com/vearne/executor"
+	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -257,7 +259,7 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 	`
 		var value lua.LValue
 		zaplog.Info("renderRequestGrpc", zap.String("source", source))
-		value, err = luavm.ExecuteLuaWithGlobals(nil, source)
+		value, err = luavm.ExecuteLuaWithGlobalsPool(nil, nil, source)
 		if err != nil {
 			zaplog.Error("renderRequestGrpc-luaBody",
 				zap.String("LuaStr", req.LuaBody),
@@ -276,8 +278,19 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 }
 
 func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.DescriptorSource, error) {
+	// 尝试从新缓存系统获取
+	if cached, found := resource.CacheManager.GrpcDescriptorCache.Get(address); found {
+		if desc, ok := cached.(grpcurl.DescriptorSource); ok {
+			slog.Debug("Using cached gRPC descriptor for %s", address)
+			return desc, nil
+		}
+	}
+
+	// 检查旧缓存系统
 	s, found := resource.DescSourceCache.Get(address)
 	if found {
+		// 从旧缓存获取到了，也存储到新缓存
+		resource.CacheManager.GrpcDescriptorCache.Set(address, s)
 		return s, nil
 	}
 
@@ -299,7 +312,9 @@ func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.Descr
 	}
 
 	s = v.(grpcurl.DescriptorSource)
+	// 同时存储到新旧缓存系统
 	resource.DescSourceCache.Set(address, s)
+	resource.CacheManager.GrpcDescriptorCache.Set(address, s)
 	return s, err
 }
 

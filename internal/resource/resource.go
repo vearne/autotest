@@ -4,13 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"github.com/vearne/autotest/internal/config"
-	"github.com/vearne/autotest/internal/model"
-	"github.com/vearne/autotest/internal/rule"
-	slog "github.com/vearne/simplelog"
-	"golang.org/x/sync/singleflight"
-	"gopkg.in/yaml.v3"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -19,6 +12,15 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-resty/resty/v2"
+	"github.com/vearne/autotest/internal/config"
+	"github.com/vearne/autotest/internal/model"
+	"github.com/vearne/autotest/internal/rule"
+	"github.com/vearne/autotest/internal/util"
+	slog "github.com/vearne/simplelog"
+	"golang.org/x/sync/singleflight"
+	"gopkg.in/yaml.v3"
 )
 
 var GlobalConfig config.AutoTestConfig
@@ -32,6 +34,7 @@ var RestyClient *resty.Client
 var TerminationFlag atomic.Bool
 
 var DescSourceCache *model.DescSourceCache
+var CacheManager *util.CacheManager
 
 var SingleFlightGroup singleflight.Group
 
@@ -41,6 +44,12 @@ func init() {
 	GrpcTestCases = make(map[string][]*config.TestCaseGrpc, 10)
 	TerminationFlag.Store(false)
 	DescSourceCache = model.NewDescSourceCache()
+}
+
+// InitCacheManager 初始化缓存管理器
+func InitCacheManager() {
+	CacheManager = util.NewCacheManager(GlobalConfig)
+	slog.Info("Cache manager initialized")
 }
 
 func InitRestyClient(debug bool) {

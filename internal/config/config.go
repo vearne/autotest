@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/vearne/autotest/internal/rule"
 	"time"
+
+	"github.com/vearne/autotest/internal/rule"
 )
 
 type AutoTestConfig struct {
@@ -11,17 +12,56 @@ type AutoTestConfig struct {
 		IgnoreTestCaseFail bool          `yaml:"ignore_testcase_fail"`
 		Debug              bool          `yaml:"debug"`
 		RequestTimeout     time.Duration `yaml:"request_timeout"`
-		Logger             struct {
+
+		// 重试配置
+		Retry struct {
+			MaxAttempts        int           `yaml:"max_attempts"`
+			RetryDelay         time.Duration `yaml:"retry_delay"`
+			RetryOnStatusCodes []int         `yaml:"retry_on_status_codes"`
+		} `yaml:"retry"`
+
+		// 并发控制
+		Concurrency struct {
+			MaxConcurrentRequests int `yaml:"max_concurrent_requests"`
+			RateLimitPerSecond    int `yaml:"rate_limit_per_second"`
+		} `yaml:"concurrency"`
+
+		// 缓存配置
+		Cache struct {
+			Enabled bool          `yaml:"enabled"`
+			TTL     time.Duration `yaml:"ttl"`
+			MaxSize int           `yaml:"max_size"`
+		} `yaml:"cache"`
+
+		Logger struct {
 			Level    string `yaml:"level"`
 			FilePath string `yaml:"file_path"`
+			// 日志轮转
+			Rotation struct {
+				MaxSize    string `yaml:"max_size"`
+				MaxAge     string `yaml:"max_age"`
+				MaxBackups int    `yaml:"max_backups"`
+			} `yaml:"rotation"`
 		} `yaml:"logger"`
+
 		Report struct {
-			DirPath string `yaml:"dir_path"`
+			DirPath      string   `yaml:"dir_path"`
+			Formats      []string `yaml:"formats"`
+			TemplatePath string   `yaml:"template_path"`
 		} `yaml:"report"`
+
+		// 通知配置
+		Notifications struct {
+			Enabled    bool   `yaml:"enabled"`
+			WebhookURL string `yaml:"webhook_url"`
+			OnFailure  bool   `yaml:"on_failure"`
+			OnSuccess  bool   `yaml:"on_success"`
+		} `yaml:"notifications"`
 	} `yaml:"global"`
 
-	HttpRuleFiles []string `yaml:"http_rule_files"`
-	GrpcRuleFiles []string `yaml:"grpc_rule_files"`
+	HttpRuleFiles []string                     `yaml:"http_rule_files"`
+	GrpcRuleFiles []string                     `yaml:"grpc_rule_files"`
+	Environments  map[string]map[string]string `yaml:"environments"`
 }
 
 type TestCaseHttp struct {

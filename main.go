@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/urfave/cli/v3"
 	"github.com/vearne/autotest/internal/command"
 	slog "github.com/vearne/simplelog"
-	"log"
-	"os"
 )
 
 const (
@@ -41,6 +42,7 @@ func main() {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "config-file", Aliases: []string{"c"}},
 					&cli.StringFlag{Name: "env-file", Aliases: []string{"e"}},
+					&cli.StringFlag{Name: "environment", Aliases: []string{"env"}, Usage: "specify environment (dev/staging/prod)"},
 				},
 				Usage:  "run all test cases",
 				Action: command.RunTestCases,

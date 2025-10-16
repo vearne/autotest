@@ -17,7 +17,7 @@ func TestLua(t *testing.T) {
         r = HttpResp.new("200", "{\"age\": 10,\"name\": \"buick\"}")
 		return verify(r)
     `
-	value, err := luavm.ExecuteLuaWithGlobals(nil, source)
+	value, err := luavm.ExecuteLuaWithGlobalsPool(registerHttpRespType, nil, source)
 	if err != nil {
 		panic(err)
 	}

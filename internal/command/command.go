@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/antchfx/jsonquery"
 	"github.com/antchfx/xpath"
 	"github.com/urfave/cli/v3"
@@ -11,7 +13,6 @@ import (
 	"github.com/vearne/autotest/internal/rule"
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
-	"strings"
 )
 
 var (
@@ -48,18 +49,22 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 		slog.Error("validate config file, error:%v", err)
 		return err
 	}
-	// 3. initialize logger & RestyClient
-	slog.Info("3. Initialize logger&RestyClient")
+	// 3. initialize logger & RestyClient & Cache
+	slog.Info("3. Initialize logger&RestyClient&Cache")
 	loggerConfig := resource.GlobalConfig.Global.Logger
 	slog.Info("loggerConfig:FilePath:%v, level:%v", loggerConfig.FilePath, loggerConfig.Level)
 	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
 	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
+	resource.InitCacheManager()
 
 	// 4. Initialize the executor and execute the testcase concurrently
 	// (if the execution fails, you may need to explain the reason for the failure)
 	slog.Info("4. Execute test cases")
 	HttpAutomateTest(resource.HttpTestCases)
 	GrpcAutomateTest(resource.GrpcTestCases)
+	// 5. output cache statistics
+	slog.Info("5. Cache statistics")
+	outputCacheStats()
 	// 6. generate report
 	slog.Info("6. output report to file")
 	return nil
@@ -275,4 +280,24 @@ func ExtractXpath(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 	return nil
+}
+
+// outputCacheStats 输出缓存统计信息
+func outputCacheStats() {
+	if resource.CacheManager == nil {
+		return
+	}
+
+	stats := resource.CacheManager.GetStats()
+	slog.Info("=== Cache Statistics ===")
+
+	for name, stat := range stats {
+		hits := stat["hits"].(int64)
+		misses := stat["misses"].(int64)
+		hitRate := stat["hit_rate"].(float64)
+		size := stat["size"].(int)
+
+		slog.Info("Cache [%s]: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
+			name, hits, misses, hitRate, size)
+	}
 }
