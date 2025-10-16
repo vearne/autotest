@@ -86,7 +86,7 @@ func (r *GrpcLuaRule) Verify(resp *model.GrpcResp) bool {
 	r = GrpcResp.new(codeStr, bodyStr);
 	return verify(r);
 `
-	value, err := luavm.ExecuteLuaWithGlobals(globals, source)
+	value, err := luavm.ExecuteLuaWithGlobalsPool(globals, source)
 	if err != nil {
 		zaplog.Error("GrpcLuaRule-Verify",
 			zap.String("code", resp.Code),

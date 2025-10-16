@@ -1,0 +1,64 @@
+# Enhanced autotest configuration
+global:
+  worker_num: 5
+  ignore_testcase_fail: true
+  debug: false
+  request_timeout: 5s
+  
+  # 新增：重试配置
+  retry:
+    max_attempts: 3
+    retry_delay: 1s
+    retry_on_status_codes: [500, 502, 503, 504]
+  
+  # 新增：并发控制
+  concurrency:
+    max_concurrent_requests: 10
+    rate_limit_per_second: 100
+  
+  # 新增：缓存配置
+  cache:
+    enabled: true
+    ttl: 300s
+    max_size: 1000
+  
+  logger:
+    level: "debug"
+    file_path: "/var/log/test/autotest.log"
+    # 新增：日志轮转
+    rotation:
+      max_size: 100MB
+      max_age: 7d
+      max_backups: 10
+      
+  report:
+    dir_path: "/var/log/test/report/"
+    # 新增：报告格式
+    formats: ["html", "json", "csv", "junit"]
+    # 新增：报告模板
+    template_path: "./templates/report.html"
+  
+  # 新增：通知配置
+  notifications:
+    enabled: true
+    webhook_url: "https://hooks.slack.com/services/..."
+    on_failure: true
+    on_success: false
+
+http_rule_files:
+  - "./config_files/my_http_api.yml"
+
+grpc_rule_files:
+  - "./config_files/my_grpc_api.yml"
+
+# 新增：环境配置
+environments:
+  dev:
+    HOST: "localhost:8080"
+    GRPC_SERVER: "localhost:50031"
+  staging:
+    HOST: "staging.example.com"
+    GRPC_SERVER: "staging.example.com:50031"
+  prod:
+    HOST: "api.example.com"
+    GRPC_SERVER: "grpc.example.com:50031"

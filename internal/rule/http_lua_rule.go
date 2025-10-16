@@ -1,12 +1,13 @@
 package rule
 
 import (
+	"strconv"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/zaplog"
-	"github.com/yuin/gopher-lua"
+	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
-	"strconv"
 )
 
 const luaHttpRespTypeName = "HttpResp"
@@ -91,7 +92,7 @@ func (r *HttpLuaRule) Verify(resp *resty.Response) bool {
 r = HttpResp.new(codeStr, bodyStr);
 return verify(r);
 `
-	value, err := luavm.ExecuteLuaWithGlobals(globals, source)
+	value, err := luavm.ExecuteLuaWithGlobalsPool(globals, source)
 	if err != nil {
 		zaplog.Error("HttpLuaRule-Verify",
 			zap.Int("status", resp.StatusCode()),

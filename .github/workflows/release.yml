@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Run tests
+      run: |
+        go test -v -race -coverprofile=coverage.out ./...
+        go tool cover -html=coverage.out -o coverage.html
+
+    - name: Build binaries
+      run: |
+        # Linux
+        GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o autotest-linux-amd64 ./
+        GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o autotest-linux-arm64 ./
+        
+        # macOS
+        GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w" -o autotest-darwin-amd64 ./
+        GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w" -o autotest-darwin-arm64 ./
+        
+        # Windows
+        GOOS=windows GOARCH=amd64 go build -ldflags "-s -w" -o autotest-windows-amd64.exe ./
+
+    - name: Create checksums
+      run: |
+        sha256sum autotest-* > checksums.txt
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          autotest-*
+          checksums.txt
+          coverage.html
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

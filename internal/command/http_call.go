@@ -2,19 +2,22 @@ package command
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/resource"
 	"github.com/vearne/executor"
+	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type HttpTestCaseResult struct {
@@ -168,15 +171,23 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	var out *resty.Response
 	method := strings.ToUpper(req.Method)
 
-	switch method {
-	case "POST":
-		out, err = in.Post(req.URL)
-	case "PUT":
-		out, err = in.Put(req.URL)
-	case "DELETE":
-		out, err = in.Delete(req.URL)
-	default: // get and others
-		out, err = in.Get(req.URL)
+	// 对于GET请求，尝试使用缓存
+	if method == "GET" {
+		out, err = executeHttpRequestWithCache(method, req.URL, req.Headers, func() (*resty.Response, error) {
+			return in.Get(req.URL)
+		})
+	} else {
+		// 非GET请求直接执行
+		switch method {
+		case "POST":
+			out, err = in.Post(req.URL)
+		case "PUT":
+			out, err = in.Put(req.URL)
+		case "DELETE":
+			out, err = in.Delete(req.URL)
+		default:
+			out, err = in.Get(req.URL)
+		}
 	}
 
 	if err != nil {
@@ -246,7 +257,7 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 	`
 		zaplog.Info("renderRequestHttp", zap.String("source", source))
 		var value lua.LValue
-		value, err = luavm.ExecuteLuaWithGlobals(nil, source)
+		value, err = luavm.ExecuteLuaWithGlobalsPool(nil, source)
 		if err != nil {
 			zaplog.Error("renderRequestHttp-luaBody",
 				zap.String("LuaStr", req.LuaBody),
@@ -262,4 +273,47 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 	}
 
 	return req, nil
+}
+
+// executeHttpRequestWithCache 执行HTTP请求并支持缓存（仅GET请求）
+func executeHttpRequestWithCache(method, url string, headers []string, executeRequest func() (*resty.Response, error)) (*resty.Response, error) {
+	// 生成缓存键
+	cacheKey := generateHttpCacheKey(method, url, headers)
+
+	// 尝试从缓存获取
+	if cached, found := resource.CacheManager.HttpResponseCache.Get(cacheKey); found {
+		if resp, ok := cached.(*resty.Response); ok {
+			slog.Debug("Using cached HTTP response for %s %s", method, url)
+			return resp, nil
+		}
+	}
+
+	// 缓存未命中，执行请求
+	slog.Debug("Executing new HTTP request for %s %s", method, url)
+	response, err := executeRequest()
+	if err != nil {
+		return nil, err
+	}
+
+	// 只缓存成功的响应
+	if response.StatusCode() >= 200 && response.StatusCode() < 300 {
+		resource.CacheManager.HttpResponseCache.Set(cacheKey, response)
+	}
+
+	return response, nil
+}
+
+// generateHttpCacheKey 生成HTTP请求的缓存键
+func generateHttpCacheKey(method, url string, headers []string) string {
+	key := fmt.Sprintf("%s:%s", method, url)
+
+	// 包含重要的头信息
+	for _, header := range headers {
+		if strings.Contains(strings.ToLower(header), "authorization") ||
+			strings.Contains(strings.ToLower(header), "content-type") {
+			key += ":" + header
+		}
+	}
+
+	return fmt.Sprintf("http:%x", md5.Sum([]byte(key)))
 }
