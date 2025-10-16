@@ -7,6 +7,9 @@ import (
 	luajson "layeh.com/gopher-json"
 )
 
+// 定义一个函数类型，用于作为参数传递
+type RegisterType func(L *lua.LState)
+
 // LuaVMPool Lua虚拟机池，避免全局锁竞争
 type LuaVMPool struct {
 	pool sync.Pool
@@ -62,7 +65,7 @@ func cleanupLuaState(L *lua.LState) {
 	}
 
 	// 3. 运行垃圾回收
-	L.DoString("collectgarbage('collect')")
+	L.DoString("collectgarbage('collect')") //nolint:errcheck
 }
 
 // isBuiltinGlobal 检查是否为Lua内置全局变量
@@ -81,19 +84,15 @@ func isBuiltinGlobal(name string) bool {
 	return builtins[name]
 }
 
-// 保持向后兼容
-var L *lua.LState
-var LuaVMLock sync.Mutex
-
-func init() {
-	L = lua.NewState()
-	luajson.Preload(L)
-}
-
 // ExecuteLuaWithGlobalsPool 使用池化的Lua虚拟机执行脚本
-func ExecuteLuaWithGlobalsPool(globals map[string]lua.LValue, source string) (lua.LValue, error) {
+func ExecuteLuaWithGlobalsPool(f RegisterType, globals map[string]lua.LValue, source string) (lua.LValue, error) {
 	L := GlobalLuaVMPool.GetLuaState()
 	defer GlobalLuaVMPool.PutLuaState(L)
+
+	// 定义数据类型和函数
+	if f != nil {
+		f(L)
+	}
 
 	// 记录执行前的栈大小
 	stackSizeBefore := L.GetTop()
@@ -117,7 +116,7 @@ func ExecuteLuaWithGlobalsPool(globals map[string]lua.LValue, source string) (lu
 	}
 
 	// 获取结果（复制值，避免引用问题）
-	var result lua.LValue = lua.LNil
+	result := lua.LNil
 	if L.GetTop() > stackSizeBefore {
 		result = L.Get(-1)
 		// 对于复杂类型，创建副本以避免状态机回收后的引用问题
@@ -162,34 +161,4 @@ func copyLuaValue(L *lua.LState, value lua.LValue) lua.LValue {
 		// 对于其他类型，返回字符串表示
 		return lua.LString(value.String())
 	}
-}
-
-// 保持向后兼容的原函数
-func ExecuteLuaWithGlobals(globals map[string]lua.LValue, source string) (lua.LValue, error) {
-	LuaVMLock.Lock()
-	defer LuaVMLock.Unlock()
-
-	// 记录执行前的栈大小
-	stackSizeBefore := L.GetTop()
-
-	// 原子性地设置所有全局变量
-	for name, value := range globals {
-		L.SetGlobal(name, value)
-	}
-
-	// 执行Lua代码
-	err := L.DoString(source)
-	if err != nil {
-		// 出错时也要清理栈
-		L.SetTop(stackSizeBefore)
-		return nil, err
-	}
-
-	// 获取结果
-	result := L.Get(-1)
-
-	// 清理栈，恢复到执行前的大小
-	L.SetTop(stackSizeBefore)
-
-	return result, nil
 }

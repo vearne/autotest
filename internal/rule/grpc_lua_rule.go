@@ -11,7 +11,7 @@ import (
 const luaGrpcRespTypeName = "GrpcResp"
 
 // Registers my person type to given L.
-func registerGrocRespType(L *lua.LState) {
+func registerGrpcRespType(L *lua.LState) {
 	mt := L.NewTypeMetatable(luaGrpcRespTypeName)
 	L.SetGlobal("GrpcResp", mt)
 	// static attributes
@@ -86,7 +86,7 @@ func (r *GrpcLuaRule) Verify(resp *model.GrpcResp) bool {
 	r = GrpcResp.new(codeStr, bodyStr);
 	return verify(r);
 `
-	value, err := luavm.ExecuteLuaWithGlobalsPool(globals, source)
+	value, err := luavm.ExecuteLuaWithGlobalsPool(registerGrpcRespType, globals, source)
 	if err != nil {
 		zaplog.Error("GrpcLuaRule-Verify",
 			zap.String("code", resp.Code),

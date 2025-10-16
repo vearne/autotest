@@ -92,7 +92,7 @@ func (r *HttpLuaRule) Verify(resp *resty.Response) bool {
 r = HttpResp.new(codeStr, bodyStr);
 return verify(r);
 `
-	value, err := luavm.ExecuteLuaWithGlobalsPool(globals, source)
+	value, err := luavm.ExecuteLuaWithGlobalsPool(registerHttpRespType, globals, source)
 	if err != nil {
 		zaplog.Error("HttpLuaRule-Verify",
 			zap.Int("status", resp.StatusCode()),

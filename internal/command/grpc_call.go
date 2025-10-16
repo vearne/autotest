@@ -259,7 +259,7 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 	`
 		var value lua.LValue
 		zaplog.Info("renderRequestGrpc", zap.String("source", source))
-		value, err = luavm.ExecuteLuaWithGlobalsPool(nil, source)
+		value, err = luavm.ExecuteLuaWithGlobalsPool(nil, nil, source)
 		if err != nil {
 			zaplog.Error("renderRequestGrpc-luaBody",
 				zap.String("LuaStr", req.LuaBody),

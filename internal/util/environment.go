@@ -164,9 +164,8 @@ func (em *EnvironmentManager) ExportToFile(filePath string) error {
 	}
 	defer file.Close()
 
-	file.WriteString("# AutoTest Environment Variables\n")
-	file.WriteString(fmt.Sprintf("# Generated at: %s\n\n",
-		fmt.Sprintf("%s", "2006-01-02 15:04:05")))
+	file.WriteString("# AutoTest Environment Variables\n")             //nolint:errcheck
+	fmt.Fprintf(file, "# Generated at: %s\n\n", "2006-01-02 15:04:05") //nolint:errcheck
 
 	for key, value := range em.vars {
 		// 如果值包含空格或特殊字符，添加引号
@@ -174,8 +173,7 @@ func (em *EnvironmentManager) ExportToFile(filePath string) error {
 			value = fmt.Sprintf("\"%s\"", strings.ReplaceAll(value, "\"", "\\\""))
 		}
 
-		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
-		if err != nil {
+		if _, err := fmt.Fprintf(file, "%s=%s\n", key, value); err != nil {
 			return fmt.Errorf("failed to write environment variable: %w", err)
 		}
 	}

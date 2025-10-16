@@ -257,7 +257,7 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 	`
 		zaplog.Info("renderRequestHttp", zap.String("source", source))
 		var value lua.LValue
-		value, err = luavm.ExecuteLuaWithGlobalsPool(nil, source)
+		value, err = luavm.ExecuteLuaWithGlobalsPool(nil, nil, source)
 		if err != nil {
 			zaplog.Error("renderRequestHttp-luaBody",
 				zap.String("LuaStr", req.LuaBody),

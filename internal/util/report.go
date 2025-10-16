@@ -263,7 +263,7 @@ func (rg *ReportGenerator) generateJUnitReport(data ReportData) error {
 	}
 	defer file.Close()
 
-	file.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+	file.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n") //nolint:errcheck
 	encoder := xml.NewEncoder(file)
 	encoder.Indent("", "  ")
 	if err := encoder.Encode(testSuite); err != nil {
