@@ -6,11 +6,20 @@
 针对api服务，http、gRPC的自动化测试框架
 
 ## 2.特点:
+### 核心功能
 * 无需进行程序开发，只需要编写配置文件
 * 可以指定testcase之间的依赖关系
 * 无依赖关系的testcase可以并发执行，执行速度更快
 * 使用XPath提取变量，书写方便
 * 支持从文件中导入变量，支持从response中提取变量
+
+### 企业级功能 🚀
+* **智能重试**: 针对网络错误和服务器错误的自动重试机制
+* **智能缓存**: gRPC描述符缓存，显著提升性能
+* **并发控制**: 速率限制和并发请求管理
+* **多格式报告**: 生成HTML、JSON、CSV、JUnit报告
+* **Slack集成**: 通过webhook实时通知测试结果
+* **环境管理**: 便捷的环境切换 (dev/staging/prod)
 
 ## 3.你需要了解的知识
 [XPath Syntax](https://www.w3schools.com/xml/xpath_syntax.asp)
@@ -37,7 +46,12 @@ autotest test --config-file=${CONFIG_FILE}
 
 ### 2) 执行自动化测试
 ``` 
+# 基础用法：使用环境文件
 autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
+
+# 高级用法：环境选择
+autotest run --config-file=${CONFIG_FILE} --environment=dev
+autotest run --config-file=${CONFIG_FILE} --environment=prod
 ```
 
 ### 3) 提取xpath对应的值
@@ -95,14 +109,85 @@ autotest extract -x "//title" -j '[
  }
 ]'
 ```
-## 7.测试报告
-### CSV格式
-![report](https://github.com/vearne/autotest/raw/main/img/result_csv.jpg)
+## 7.测试报告与通知
 
-### HTML格式
-![report](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
+### 多格式报告生成
+AutoTest 现在支持多种报告格式：
 
-## 8.高级用法
+- **HTML**: 美观的网页报告，支持自定义模板
+- **JSON**: 结构化数据，便于程序化处理  
+- **CSV**: 表格数据，便于Excel分析
+- **JUnit**: CI/CD集成友好的XML格式
+
+配置示例：
+```yaml
+global:
+  report:
+    dir_path: "/var/log/test/report/"
+    formats: ["html", "json", "csv", "junit"]  # 生成多种格式
+    template_path: "./templates/custom.html"   # 可选的自定义模板
+```
+
+### Slack通知 📢
+获取实时测试结果通知：
+
+```yaml
+global:
+  notifications:
+    enabled: true
+    webhook_url: "https://hooks.slack.com/services/..."
+    on_failure: true   # 测试失败时通知
+    on_success: false  # 可选的成功通知
+```
+
+### 报告样例
+![CSV报告](https://github.com/vearne/autotest/raw/main/img/result_csv.jpg)
+![HTML报告](https://github.com/vearne/autotest/raw/main/img/result_html.jpg)
+
+## 8.企业级配置
+
+### 性能与稳定性
+```yaml
+global:
+  # 重试机制，提升稳定性
+  retry:
+    max_attempts: 3                        # 自动重试失败请求
+    retry_delay: 1s                        # 重试间隔
+    retry_on_status_codes: [500, 502, 503, 504]
+
+  # 并发控制  
+  concurrency:
+    max_concurrent_requests: 20            # 限制并发请求数
+    rate_limit_per_second: 50              # 速率限制
+
+  # 智能缓存（默认开启）
+  cache:
+    enabled: true                          # gRPC描述符缓存
+    ttl: 300s                             # 缓存TTL
+    max_size: 100                         # 缓存条目数
+```
+
+### 环境管理
+```yaml
+# 多环境支持
+environments:
+  dev:
+    HOST: "localhost:8080"
+    GRPC_SERVER: "localhost:50031"
+  staging:
+    HOST: "staging.api.com"  
+    GRPC_SERVER: "staging.grpc.com:50031"
+  prod:
+    HOST: "api.example.com"
+    GRPC_SERVER: "grpc.example.com:50031"
+```
+
+使用方法：
+```bash
+autotest run -c config.yml --environment=prod
+```
+
+## 9.高级用法
 某些场景，我们可能需要使用lua脚本来生成请求的body，或者用脚本来验证响应的body是否符合预期
 ```
 - id: 6

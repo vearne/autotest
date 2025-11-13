@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/antchfx/jsonquery"
 	"github.com/antchfx/xpath"
 	"github.com/urfave/cli/v3"
 	"github.com/vearne/autotest/internal/resource"
 	"github.com/vearne/autotest/internal/rule"
+	"github.com/vearne/autotest/internal/util"
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 )
@@ -21,12 +23,45 @@ var (
 	ErrorIDRestrict         = errors.New("the ID of the dependent testcase must be smaller than the ID of the current testcase")
 )
 
+// UnifiedTestResults 统一的测试结果
+type UnifiedTestResults struct {
+	TotalTests  int
+	PassedTests int
+	FailedTests int
+	FailedCases []string
+}
+
+// CombineResults 合并HTTP和gRPC测试结果
+func CombineResults(httpResults, grpcResults *UnifiedTestResults) *UnifiedTestResults {
+	if httpResults == nil {
+		httpResults = &UnifiedTestResults{}
+	}
+	if grpcResults == nil {
+		grpcResults = &UnifiedTestResults{}
+	}
+
+	combined := &UnifiedTestResults{
+		TotalTests:  httpResults.TotalTests + grpcResults.TotalTests,
+		PassedTests: httpResults.PassedTests + grpcResults.PassedTests,
+		FailedTests: httpResults.FailedTests + grpcResults.FailedTests,
+	}
+
+	// 合并失败用例
+	combined.FailedCases = append(combined.FailedCases, httpResults.FailedCases...)
+	combined.FailedCases = append(combined.FailedCases, grpcResults.FailedCases...)
+
+	return combined
+}
+
 func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	confFilePath := cmd.String("config-file")
 	slog.Info("config-file:%v", confFilePath)
 
 	envFilePath := cmd.String("env-file")
 	slog.Info("env-file:%v", envFilePath)
+
+	environment := cmd.String("environment")
+	slog.Info("environment:%v", environment)
 
 	// 1. Parsing configuration files
 	slog.Info("1. Parse config file")
@@ -49,24 +84,50 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 		slog.Error("validate config file, error:%v", err)
 		return err
 	}
-	// 3. initialize logger & RestyClient & Cache
-	slog.Info("3. Initialize logger&RestyClient&Cache")
+	// 3. initialize logger & RestyClient & RetryClient & Cache & RateLimiter & EnvironmentManager & ReportGenerator & NotificationService
+	slog.Info("3. Initialize logger&RestyClient&RetryClient&Cache&RateLimiter&EnvironmentManager&ReportGenerator&NotificationService")
 	loggerConfig := resource.GlobalConfig.Global.Logger
 	slog.Info("loggerConfig:FilePath:%v, level:%v", loggerConfig.FilePath, loggerConfig.Level)
 	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
 	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
+	resource.InitRetryClient()
 	resource.InitCacheManager()
+	resource.InitRateLimiter()
+	resource.InitEnvironmentManager()
+	resource.InitReportGenerator()
+	resource.InitNotificationService()
 
-	// 4. Initialize the executor and execute the testcase concurrently
+	// 4. Load specified environment
+	slog.Info("4. Load environment configuration")
+	err = resource.LoadEnvironment(environment)
+	if err != nil {
+		slog.Error("failed to load environment '%s': %v", environment, err)
+		return err
+	}
+
+	// 5. Initialize the executor and execute the testcase concurrently
 	// (if the execution fails, you may need to explain the reason for the failure)
-	slog.Info("4. Execute test cases")
-	HttpAutomateTest(resource.HttpTestCases)
-	GrpcAutomateTest(resource.GrpcTestCases)
-	// 5. output cache statistics
-	slog.Info("5. Cache statistics")
+	slog.Info("5. Execute test cases")
+	startTime := time.Now()
+
+	httpResults := HttpAutomateTest(resource.HttpTestCases)
+	grpcResults := GrpcAutomateTest(resource.GrpcTestCases)
+
+	endTime := time.Now()
+	totalDuration := endTime.Sub(startTime)
+
+	// 6. output cache statistics
+	slog.Info("6. Cache statistics")
 	outputCacheStats()
-	// 6. generate report
-	slog.Info("6. output report to file")
+
+	// 7. generate unified reports and send notifications
+	slog.Info("7. Generate reports and send notifications")
+	err = generateUnifiedReportsAndNotifications(httpResults, grpcResults, startTime, endTime, totalDuration)
+	if err != nil {
+		slog.Error("Failed to generate reports or send notifications: %v", err)
+		// 不返回错误，因为测试已经完成，报告生成失败不应该影响整体结果
+	}
+
 	return nil
 }
 
@@ -300,4 +361,80 @@ func outputCacheStats() {
 		slog.Info("Cache [%s]: Hits=%d, Misses=%d, HitRate=%.2f%%, Size=%d",
 			name, hits, misses, hitRate, size)
 	}
+}
+
+// generateUnifiedReportsAndNotifications 生成统一报告并发送通知
+func generateUnifiedReportsAndNotifications(httpResults, grpcResults *UnifiedTestResults, startTime, endTime time.Time, totalDuration time.Duration) error {
+	// 合并测试结果
+	combinedResults := CombineResults(httpResults, grpcResults)
+
+	if combinedResults.TotalTests == 0 {
+		slog.Info("No test cases to report")
+		return nil
+	}
+
+	// 构建报告数据
+	reportData := util.ReportData{}
+	reportData.Summary.TotalTests = combinedResults.TotalTests
+	reportData.Summary.PassedTests = combinedResults.PassedTests
+	reportData.Summary.FailedTests = combinedResults.FailedTests
+	reportData.Summary.SkippedTests = 0 // 当前架构没有跳过的测试
+	reportData.Summary.Duration = totalDuration
+	reportData.Summary.StartTime = startTime
+	reportData.Summary.EndTime = endTime
+
+	if combinedResults.TotalTests > 0 {
+		reportData.Summary.PassRate = float64(combinedResults.PassedTests) / float64(combinedResults.TotalTests) * 100
+	}
+
+	// 转换测试用例详情（这里简化处理，实际项目中可能需要更详细的信息）
+	for i, failedCase := range combinedResults.FailedCases {
+		testCaseResult := util.TestCaseResult{
+			ID:          uint64(i + 1),
+			Description: failedCase,
+			Status:      "failed",
+			Duration:    time.Second, // 简化处理
+			StartTime:   startTime,
+			EndTime:     endTime,
+			ErrorMsg:    "Test case failed", // 简化处理
+		}
+		reportData.TestCases = append(reportData.TestCases, testCaseResult)
+	}
+
+	// 生成报告
+	if resource.ReportGenerator != nil {
+		slog.Info("Generating reports with formats: %v", resource.GlobalConfig.Global.Report.Formats)
+		err := resource.ReportGenerator.GenerateReports(reportData)
+		if err != nil {
+			slog.Error("Failed to generate reports: %v", err)
+			return fmt.Errorf("failed to generate reports: %w", err)
+		}
+		slog.Info("Reports generated successfully")
+	} else {
+		slog.Warn("ReportGenerator not initialized, skipping report generation")
+	}
+
+	// 发送通知
+	if resource.NotificationService != nil {
+		notificationResult := util.TestResult{
+			TotalTests:  combinedResults.TotalTests,
+			PassedTests: combinedResults.PassedTests,
+			FailedTests: combinedResults.FailedTests,
+			Duration:    totalDuration,
+			StartTime:   startTime,
+			EndTime:     endTime,
+			FailedCases: combinedResults.FailedCases,
+		}
+
+		err := resource.NotificationService.SendTestResult(notificationResult)
+		if err != nil {
+			slog.Error("Failed to send notification: %v", err)
+			return fmt.Errorf("failed to send notification: %w", err)
+		}
+		slog.Info("Notification sent successfully")
+	} else {
+		slog.Warn("NotificationService not initialized, skipping notification")
+	}
+
+	return nil
 }

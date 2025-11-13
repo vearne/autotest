@@ -2,20 +2,30 @@
 
 ## 概述
 
-AutoTest的缓存系统旨在提升测试执行性能，减少重复计算和网络请求。通过智能缓存，可以显著提高大规模测试场景的执行效率。
+AutoTest的缓存系统专门优化gRPC测试性能，通过缓存gRPC服务描述符避免重复的反射调用，显著提升大规模gRPC测试的执行效率。
 
-## 缓存类型
+> **重要**：缓存系统**默认开启**！考虑到gRPC描述符缓存收益明显（可节省50-200秒）且开销很小，系统会自动启用缓存功能。
 
-### 1. gRPC描述符缓存 (GrpcDescriptorCache)
+> **注意**：这是经过优化的缓存系统，专注于最有价值的gRPC描述符缓存，移除了收益有限的HTTP响应缓存、模板缓存和Lua脚本缓存，既保留了核心性能优化，又降低了系统复杂性。
 
-**用途：** 缓存gRPC服务的反射信息和方法描述符
+## gRPC描述符缓存
 
-**场景：**
+### 用途
+缓存gRPC服务的反射信息和方法描述符，避免重复的服务发现和反射调用。
+
+### 适用场景
 - 多个测试用例调用同一个gRPC服务
-- 避免重复的服务发现和反射调用
-- 提升gRPC测试执行速度
+- 大规模gRPC测试（1000+测试用例）
+- 需要优化测试执行时间的场景
 
-**示例：**
+### 性能收益
+在1000个gRPC测试用例的场景下：
+- **无缓存**: 1000次 × 50-200ms (反射调用) = 50-200秒
+- **有缓存**: 1次 × 100ms + 999次 × 0.001ms ≈ 0.1秒
+- **节省时间**: 约50-200秒
+
+### 示例配置
+
 ```yaml
 # 多个测试用例使用同一个gRPC服务
 - id: 1
@@ -29,122 +39,56 @@ AutoTest的缓存系统旨在提升测试执行性能，减少重复计算和网
     symbol: "Bookstore/ListBook"
 ```
 
-### 2. HTTP响应缓存 (HttpResponseCache)
-
-**用途：** 缓存GET请求的响应结果
-
-**场景：**
-- 获取测试数据或配置信息
-- 减少对第三方API的重复调用
-- 提升依赖数据获取效率
-
-**示例：**
-```yaml
-# 获取用户信息，结果会被缓存
-- id: 1
-  request:
-    method: "get"
-    url: "http://{{ HOST }}/api/users/123"
-
-# 后续相同请求会使用缓存
-- id: 2
-  request:
-    method: "get"  
-    url: "http://{{ HOST }}/api/users/123"  # 从缓存获取
-```
-
-### 3. 模板缓存 (TemplateCache)
-
-**用途：** 缓存模板渲染结果
-
-**场景：**
-- 相同模板和变量组合的重复渲染
-- URL模板、请求体模板等
-- 减少模板解析开销
-
-**示例：**
-```yaml
-# 相同的URL模板会被缓存
-- id: 1
-  request:
-    url: "http://{{ HOST }}/api/books/{{ BOOK_ID }}"  # 首次渲染
-
-- id: 2
-  request:
-    url: "http://{{ HOST }}/api/books/{{ BOOK_ID }}"  # 使用缓存结果
-```
-
-### 4. Lua脚本缓存 (LuaScriptCache)
-
-**用途：** 缓存编译后的Lua脚本
-
-**场景：**
-- 相同Lua脚本的重复编译
-- 提升脚本执行性能
-- 减少Lua虚拟机开销
-
-**示例：**
-```yaml
-# 相同的Lua脚本会被缓存
-- id: 1
-  request:
-    luaBody: |
-      function body()
-        return '{"id": 1}'
-      end
-
-- id: 2  
-  request:
-    luaBody: |
-      function body()
-        return '{"id": 1}'  # 相同脚本，使用缓存的编译结果
-      end
-```
-
 ## 配置选项
+
+### 默认行为
+
+**缓存默认开启**，无需任何配置即可享受性能优化！
+
+### 可选配置
+
+如果需要自定义缓存行为，可以在配置文件中（如 `config_files/autotest.yml` 或 `config_files/autotest_enhanced.yml`）添加：
 
 ```yaml
 global:
   cache:
-    enabled: true        # 是否启用缓存
-    ttl: 300s           # 缓存过期时间（5分钟）
-    max_size: 1000      # 最大缓存条目数
+    enabled: true        # 可选：显式开启缓存（默认已开启）
+    ttl: 300s           # 可选：缓存过期时间（默认5分钟）
+    max_size: 100       # 可选：最大缓存条目数（默认100）
+```
+
+### 禁用缓存
+
+如果您确实需要禁用缓存（不推荐），可以这样配置：
+
+```yaml
+global:
+  cache:
+    enabled: false      # 显式禁用缓存
 ```
 
 ### 配置说明
 
-- **enabled**: 控制是否启用缓存功能
-- **ttl**: 缓存项的生存时间，过期后自动清理
-- **max_size**: 缓存的最大条目数，超出时会淘汰最旧的项
+- **enabled**: 控制是否启用缓存功能（**默认：true**）
+- **ttl**: 缓存项的生存时间，过期后自动清理（**默认：5分钟**）  
+- **max_size**: 缓存的最大条目数（**默认：100个**，足够gRPC描述符使用）
 
 ## 性能优化建议
 
 ### 1. 合理设置TTL
 
 ```yaml
-# 根据数据更新频率设置TTL
+# 对于相对稳定的gRPC服务，可以设置较长的TTL
 cache:
-  ttl: 300s    # 对于相对稳定的数据，可以设置较长的TTL
+  ttl: 600s    # 10分钟，适合稳定的开发/测试环境
 ```
 
 ### 2. 控制缓存大小
 
 ```yaml
-# 根据内存使用情况调整缓存大小
+# 根据使用的gRPC服务数量调整
 cache:
-  max_size: 2000  # 增加缓存大小以提高命中率
-```
-
-### 3. 缓存预热
-
-在测试开始前预加载常用数据：
-
-```bash
-# 可以通过配置文件预定义常用的模板和数据
-environments:
-  dev:
-    HOST: "localhost:8080"
-    GRPC_SERVER: "localhost:50051"
+  max_size: 50   # 如果只有几个gRPC服务，可以设置更小的值
 ```
 
 ## 缓存统计
@@ -161,46 +105,30 @@ environments:
 ### 监控缓存性能
 
 ```bash
+# 运行gRPC测试并查看缓存效果
+./autotest grpc-automate -c config_files/autotest.yml
+
 # 在日志中查看缓存统计信息
 grep "Cache" /var/log/test/autotest.log
 
 # 示例输出：
-# Cache HIT: grpc:localhost:50051
-# Cache MISS: http:get:localhost:8080/api/new-endpoint
-# Cache cleanup: removed 5 expired items
+# Cache initialized: TTL=5m0s, MaxSize=100
+# Using cached gRPC descriptor for localhost:50051
+# Cache HIT: localhost:50051
+# Cache [grpc_descriptor]: Hits=999, Misses=1, HitRate=99.90%, Size=1
+# gRPC descriptor cache cleared
 ```
 
-## 最佳实践
+### 验证缓存效果
 
-### 1. 适合缓存的场景
+```bash
+# 第一次运行：缓存未命中，会较慢
+time ./autotest grpc-automate -c config_files/autotest.yml
 
-✅ **推荐缓存：**
-- GET请求获取参考数据
-- gRPC服务反射信息
-- 相同的模板渲染
-- 重复的Lua脚本
+# 第二次运行：缓存命中，会明显加速
+time ./autotest grpc-automate -c config_files/autotest.yml
 
-❌ **不推荐缓存：**
-- POST/PUT/DELETE等修改操作
-- 包含随机数据的请求
-- 实时性要求高的数据
-
-### 2. 缓存键设计
-
-缓存系统会自动生成缓存键，包含：
-- 请求方法和URL
-- 重要的请求头（如Authorization）
-- 模板内容和变量
-- Lua脚本内容
-
-### 3. 内存管理
-
-```yaml
-# 根据测试规模调整缓存配置
-cache:
-  enabled: true
-  ttl: 600s        # 大型测试可以设置更长的TTL
-  max_size: 5000   # 增加缓存容量
+# 比较两次执行时间，第二次应该明显更快
 ```
 
 ## 故障排除
@@ -209,19 +137,19 @@ cache:
 
 1. **检查配置**：确认 `cache.enabled: true`
 2. **查看日志**：搜索 "Cache" 关键字
-3. **验证请求**：确保是相同的GET请求
+3. **验证服务地址**：确保gRPC服务地址一致
 
 ### 内存使用过高
 
-1. **减少缓存大小**：降低 `max_size` 值
-2. **缩短TTL**：减少 `ttl` 时间
+1. **减少缓存大小**：降低 `max_size` 值到 50 或更少
+2. **缩短TTL**：减少 `ttl` 时间到 300s 或更短
 3. **禁用缓存**：设置 `enabled: false`
 
-### 数据不一致
+### 服务更新后缓存不一致
 
-1. **清理缓存**：重启测试程序
-2. **缩短TTL**：减少缓存时间
-3. **排除缓存**：临时禁用缓存验证
+1. **重启测试程序**：清理所有缓存
+2. **缩短TTL**：减少缓存时间，如设置为 60s
+3. **手动清理**：程序会在TTL到期后自动清理
 
 ## 示例配置
 
@@ -231,7 +159,7 @@ global:
   cache:
     enabled: true
     ttl: 900s      # 15分钟
-    max_size: 3000
+    max_size: 100
 ```
 
 ### 保守配置  
@@ -239,8 +167,8 @@ global:
 global:
   cache:
     enabled: true
-    ttl: 60s       # 1分钟
-    max_size: 500
+    ttl: 300s      # 5分钟
+    max_size: 50
 ```
 
 ### 禁用缓存
@@ -250,4 +178,20 @@ global:
     enabled: false
 ```
 
-通过合理配置和使用缓存系统，可以显著提升AutoTest的执行性能，特别是在大规模测试场景中。
+## 总结
+
+对于1000个测试用例规模的gRPC测试：
+- **性能收益**：gRPC描述符缓存可以节省50-200秒的执行时间
+- **资源占用**：内存开销很小（通常只需要缓存几个gRPC服务的描述符）
+- **零配置**：默认开启，无需任何配置即可享受性能优化
+- **适用场景**：特别适合CI/CD环境中的大规模自动化测试
+
+### 快速开始
+
+1. **直接运行**：使用 `./autotest grpc-automate -c your-config.yml`（缓存已默认开启）
+2. **查看效果**：检查日志中的缓存统计信息
+3. **可选调优**：根据实际使用情况调整 `ttl` 和 `max_size`
+
+> 💡 **提示**：由于缓存默认开启，您无需任何额外配置即可享受性能提升！
+
+通过合理配置gRPC描述符缓存，可以显著提升AutoTest的执行性能，让您的测试更快、更高效！

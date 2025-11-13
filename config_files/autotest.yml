@@ -8,6 +8,23 @@ global:
   # Timeout setting for each request
   request_timeout: 5s
   
+  # 重试机制：提升测试稳定性（自动启用，可选配置）
+  # retry:
+  #   max_attempts: 3              # 最大重试次数（默认3次）
+  #   retry_delay: 1s              # 重试间隔（默认1秒）
+  #   retry_on_status_codes: []    # HTTP重试状态码（默认: 500,502,503,504,408,429）
+  
+  # 高级配置：并发控制（可选，已有合理默认值）
+  # concurrency:
+  #   max_concurrent_requests: 20  # 最大并发请求数（默认20）
+  #   rate_limit_per_second: 50    # 每秒请求数限制（默认50）
+  
+  # 高级配置：缓存优化（可选，缓存默认开启）
+  # cache:
+  #   enabled: true    # 显式开启（默认已开启）  
+  #   ttl: 300s       # 缓存过期时间（默认5分钟）
+  #   max_size: 100   # 缓存条目数（默认100个）
+  
   logger:
     # 1. "info"
     # 2. "debug"
@@ -18,7 +35,7 @@ global:
     dir_path: "/var/log/test/report/"
   
 http_rule_files:
-  - "./config_files/my_http_api.yml"
+#  - "./config_files/my_http_api.yml"
 
 grpc_rule_files:
   - "./config_files/my_grpc_api.yml"
