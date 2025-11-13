@@ -31,10 +31,10 @@ autotest test --config-file=./config_files/autotest.yml
 
 ### 3. 运行测试
 ```bash
-# 基础用法：使用环境文件
-autotest run --config-file=./config_files/autotest.yml --env-file=./config_files/.env.dev
+# 基础用法
+autotest run --config-file=./config_files/autotest.yml
 
-# 高级用法：环境选择（推荐）
+# 环境选择用法
 autotest run --config-file=./config_files/autotest.yml --environment=dev
 autotest run --config-file=./config_files/autotest.yml --environment=staging  
 autotest run --config-file=./config_files/autotest.yml --environment=prod

@@ -49,10 +49,10 @@ autotest test --config-file=${CONFIG_FILE}
 
 ### 2) execute automated tests
 ``` 
-# Basic usage with env file
-autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
+# Basic usage
+autotest run --config-file=${CONFIG_FILE}
 
-# Advanced usage with environment selection
+# Environment selection usage
 autotest run --config-file=${CONFIG_FILE} --environment=dev
 autotest run --config-file=${CONFIG_FILE} --environment=prod
 ```

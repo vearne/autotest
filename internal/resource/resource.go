@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -176,7 +175,7 @@ func InitNotificationService() {
 }
 
 func ParseConfigFile(filePath string) error {
-	slog.Info("[start]ParseConfigFile")
+	slog.Info("[start]ParseConfigFile:%v", filePath)
 
 	b, err := readFile(filePath)
 	if err != nil {
@@ -359,31 +358,6 @@ func ParseConfigFile(filePath string) error {
 	return nil
 }
 
-func ParseEnvFile(filePath string) error {
-	slog.Info("[start]ParseEnvFile")
-
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return os.ErrNotExist
-	}
-
-	lines, err := ReadLines(filePath)
-	if err != nil {
-		return err
-	}
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "#") {
-			continue
-		}
-		strlist := strings.Split(line, "=")
-		if len(strlist) == 2 {
-			EnvVars[strlist[0]] = strlist[1]
-		}
-	}
-
-	slog.Info("[end]ParseEnvFile")
-	return nil
-}
 
 func readFile(filePath string) ([]byte, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -392,18 +366,3 @@ func readFile(filePath string) ([]byte, error) {
 	return os.ReadFile(filePath)
 }
 
-// ReadLines reads all lines of the file.
-func ReadLines(path string) ([]string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	return lines, scanner.Err()
-}
