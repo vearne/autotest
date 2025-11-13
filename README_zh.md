@@ -46,10 +46,10 @@ autotest test --config-file=${CONFIG_FILE}
 
 ### 2) 执行自动化测试
 ``` 
-# 基础用法：使用环境文件
-autotest run --config-file=${CONFIG_FILE} --env-file=${ENV_FILE}
+# 基础用法
+autotest run --config-file=${CONFIG_FILE}
 
-# 高级用法：环境选择
+# 环境选择用法  
 autotest run --config-file=${CONFIG_FILE} --environment=dev
 autotest run --config-file=${CONFIG_FILE} --environment=prod
 ```

@@ -41,7 +41,6 @@ func main() {
 				Name: "run",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "config-file", Aliases: []string{"c"}, Usage: "path to configuration file"},
-					&cli.StringFlag{Name: "env-file", Aliases: []string{"e"}, Usage: "path to environment file"},
 					&cli.StringFlag{Name: "environment", Aliases: []string{"env"}, Usage: "specify environment (dev/staging/prod) - loads variables from config"},
 				},
 				Usage:  "run all test cases",

@@ -57,9 +57,6 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	confFilePath := cmd.String("config-file")
 	slog.Info("config-file:%v", confFilePath)
 
-	envFilePath := cmd.String("env-file")
-	slog.Info("env-file:%v", envFilePath)
-
 	environment := cmd.String("environment")
 	slog.Info("environment:%v", environment)
 
@@ -69,12 +66,6 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	err := resource.ParseConfigFile(confFilePath)
 	if err != nil {
 		slog.Error("config file parse error, %v", err)
-		return err
-	}
-	// 1.2 env file
-	err = resource.ParseEnvFile(envFilePath)
-	if err != nil {
-		slog.Error("env file parse error, %v", err)
 		return err
 	}
 	// 2. validate config
