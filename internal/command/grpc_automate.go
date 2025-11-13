@@ -19,13 +19,13 @@ import (
 	"time"
 )
 
-func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) {
+func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) *UnifiedTestResults {
 	total := 0
 	for _, testcases := range grpcTestCases {
 		total += len(testcases)
 	}
 	if total <= 0 {
-		return
+		return &UnifiedTestResults{}
 	}
 
 	begin := time.Now()
@@ -36,6 +36,8 @@ func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) {
 	finishCount := 0
 	successCount := 0
 	failedCount := 0
+	var failedCases []string
+	
 	for filePath := range grpcTestCases {
 		// if ignore_testcase_fail is false and some testcases have failed.
 		if resource.TerminationFlag.Load() {
@@ -46,12 +48,27 @@ func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) {
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
+		
+		// 收集失败用例信息
+		for _, tcResult := range tcResultList {
+			if tcResult.State != model.StateSuccessFul {
+				failedCases = append(failedCases, fmt.Sprintf("GRPC_%d: %s", tcResult.ID, tcResult.Desc))
+			}
+		}
+		
 		slog.Info("GrpcTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
-		// generate report file
+		// generate report file (保留旧的报告生成作为备份)
 		GenReportFileGrpc(filePath, tcResultList, info)
 	}
 	slog.Info("[end]GrpcTestCases, total:%v, cost:%v", total, time.Since(begin))
+	
+	return &UnifiedTestResults{
+		TotalTests:  finishCount,
+		PassedTests: successCount,
+		FailedTests: failedCount,
+		FailedCases: failedCases,
+	}
 }
 
 func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTestCaseResult) {

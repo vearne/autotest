@@ -20,6 +20,7 @@ import (
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/resource"
+	"github.com/vearne/autotest/internal/util"
 	"github.com/vearne/executor"
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
@@ -171,7 +172,7 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 	rCtx, cancel = context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// 6. trigger remote request
+	// 6. trigger remote request with rate limiting
 	in = strings.NewReader(reqInfo.Body)
 	rf, formatter, err = grpcurl.RequestParserAndFormatter(grpcurl.FormatJSON, descSource, in, options)
 	if err != nil {
@@ -183,7 +184,13 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 		goto ERROR
 	}
 	handler = NewEventHandler(formatter)
-	err = grpcurl.InvokeRPC(rCtx, descSource, cc, reqInfo.Symbol, reqInfo.Headers, handler, rf.Next)
+
+	// 使用限流器和重试机制控制gRPC请求的并发、速率和稳定性
+	err = resource.RateLimiter.ExecuteWithLimit(rCtx, func() error {
+		return util.ExecuteGrpcWithRetry(rCtx, resource.GlobalConfig, func() error {
+			return grpcurl.InvokeRPC(rCtx, descSource, cc, reqInfo.Symbol, reqInfo.Headers, handler, rf.Next)
+		})
+	})
 	if err != nil {
 		zaplog.Error("GrpcTestCallable-invokeRPC",
 			zap.Uint64("testCaseId", m.testcase.ID),
@@ -278,7 +285,7 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 }
 
 func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.DescriptorSource, error) {
-	// 尝试从新缓存系统获取
+	// 尝试从缓存获取
 	if cached, found := resource.CacheManager.GrpcDescriptorCache.Get(address); found {
 		if desc, ok := cached.(grpcurl.DescriptorSource); ok {
 			slog.Debug("Using cached gRPC descriptor for %s", address)
@@ -286,14 +293,7 @@ func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.Descr
 		}
 	}
 
-	// 检查旧缓存系统
-	s, found := resource.DescSourceCache.Get(address)
-	if found {
-		// 从旧缓存获取到了，也存储到新缓存
-		resource.CacheManager.GrpcDescriptorCache.Set(address, s)
-		return s, nil
-	}
-
+	// 缓存未命中，获取新的描述符
 	v, err, _ := resource.SingleFlightGroup.Do(address, func() (interface{}, error) {
 		md := grpcurl.MetadataFromHeaders([]string{})
 		refCtx := metadata.NewOutgoingContext(ctx, md)
@@ -311,9 +311,8 @@ func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.Descr
 		return nil, err
 	}
 
-	s = v.(grpcurl.DescriptorSource)
-	// 同时存储到新旧缓存系统
-	resource.DescSourceCache.Set(address, s)
+	s := v.(grpcurl.DescriptorSource)
+	// 存储到缓存
 	resource.CacheManager.GrpcDescriptorCache.Set(address, s)
 	return s, err
 }

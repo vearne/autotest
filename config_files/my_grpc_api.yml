@@ -124,7 +124,7 @@
 - id: 7
   desc: "get book 2"
   delay: 1s
-  dependOnIDs: [6]
+  dependOnIDs: [5]
   request:
     address: "{{ GRPC_SERVER }}"
     symbol: "Bookstore/GetBook"
@@ -145,6 +145,7 @@
         
 - id: 8
   desc: "add new book"
+  dependOnIDs: [4]
   request:
     address: "{{ GRPC_SERVER }}"
     symbol: "Bookstore/AddBook"

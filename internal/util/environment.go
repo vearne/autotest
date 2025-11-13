@@ -48,6 +48,15 @@ func (em *EnvironmentManager) LoadEnvironment(envName string) error {
 	return nil
 }
 
+// GetAllVars 获取所有环境变量
+func (em *EnvironmentManager) GetAllVars() map[string]string {
+	result := make(map[string]string)
+	for key, value := range em.vars {
+		result[key] = value
+	}
+	return result
+}
+
 // LoadFromFile 从文件加载环境变量
 func (em *EnvironmentManager) LoadFromFile(filePath string) error {
 	if filePath == "" {

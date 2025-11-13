@@ -26,7 +26,7 @@ type Cache struct {
 	ttl     time.Duration
 	maxSize int
 	enabled bool
-	
+
 	// 统计信息
 	hits   int64
 	misses int64
@@ -46,7 +46,30 @@ func NewCache(cfg config.AutoTestConfig) *Cache {
 		cache.ttl = 5 * time.Minute // 默认5分钟
 	}
 	if cache.maxSize <= 0 {
-		cache.maxSize = 1000 // 默认1000个条目
+		cache.maxSize = 100 // 默认100个条目，适合gRPC描述符缓存
+	}
+
+	// 缓存默认开启策略：
+	// 考虑到gRPC描述符缓存收益明显(节省50-200秒)且开销很小，默认开启缓存
+	// 只有当配置文件中有完整的缓存配置且显式设置 enabled: false 时才禁用
+
+	cache.enabled = true // 默认开启
+
+	// 检查用户是否有完整的缓存配置且显式禁用
+	hasFullCacheConfig := (cfg.Global.Cache.TTL > 0 || cfg.Global.Cache.MaxSize > 0) && !cfg.Global.Cache.Enabled
+
+	if hasFullCacheConfig {
+		// 用户有缓存配置但明确设置了 enabled: false，尊重用户选择
+		cache.enabled = false
+		slog.Info("Cache disabled by user configuration (enabled: false)")
+	} else if cfg.Global.Cache.Enabled {
+		// 用户显式开启
+		cache.enabled = true
+		slog.Info("Cache enabled by user configuration (enabled: true)")
+	} else {
+		// 其他情况：没有配置或只有部分配置，默认开启
+		cache.enabled = true
+		slog.Info("Cache enabled by default for better performance")
 	}
 
 	// 启动清理协程
@@ -54,7 +77,7 @@ func NewCache(cfg config.AutoTestConfig) *Cache {
 		go cache.cleanup()
 		slog.Info("Cache initialized: TTL=%v, MaxSize=%d", cache.ttl, cache.maxSize)
 	} else {
-		slog.Info("Cache disabled")
+		slog.Info("Cache disabled by configuration")
 	}
 
 	return cache
@@ -168,7 +191,7 @@ func (c *Cache) Stats() (hits, misses int64, hitRate float64) {
 	hits = c.hits
 	misses = c.misses
 	total := hits + misses
-	
+
 	if total > 0 {
 		hitRate = float64(hits) / float64(total) * 100
 	}
@@ -203,7 +226,7 @@ func (c *Cache) cleanup() {
 
 	for range ticker.C {
 		c.mutex.Lock()
-		
+
 		var expiredKeys []string
 		for key, item := range c.items {
 			if item.IsExpired() {
@@ -225,52 +248,34 @@ func (c *Cache) cleanup() {
 
 // CacheManager 缓存管理器
 type CacheManager struct {
-	// 不同类型的缓存
+	// 只保留真正有价值的缓存
 	GrpcDescriptorCache *Cache // gRPC描述符缓存
-	HttpResponseCache   *Cache // HTTP响应缓存  
-	TemplateCache       *Cache // 模板缓存
-	LuaScriptCache      *Cache // Lua脚本缓存
 }
 
 // NewCacheManager 创建缓存管理器
 func NewCacheManager(cfg config.AutoTestConfig) *CacheManager {
 	return &CacheManager{
 		GrpcDescriptorCache: NewCache(cfg),
-		HttpResponseCache:   NewCache(cfg),
-		TemplateCache:       NewCache(cfg),
-		LuaScriptCache:      NewCache(cfg),
 	}
 }
 
-// GetStats 获取所有缓存的统计信息
+// GetStats 获取缓存的统计信息
 func (cm *CacheManager) GetStats() map[string]map[string]interface{} {
 	stats := make(map[string]map[string]interface{})
 
-	caches := map[string]*Cache{
-		"grpc_descriptor": cm.GrpcDescriptorCache,
-		"http_response":   cm.HttpResponseCache,
-		"template":        cm.TemplateCache,
-		"lua_script":      cm.LuaScriptCache,
-	}
-
-	for name, cache := range caches {
-		hits, misses, hitRate := cache.Stats()
-		stats[name] = map[string]interface{}{
-			"hits":     hits,
-			"misses":   misses,
-			"hit_rate": hitRate,
-			"size":     cache.Size(),
-		}
+	hits, misses, hitRate := cm.GrpcDescriptorCache.Stats()
+	stats["grpc_descriptor"] = map[string]interface{}{
+		"hits":     hits,
+		"misses":   misses,
+		"hit_rate": hitRate,
+		"size":     cm.GrpcDescriptorCache.Size(),
 	}
 
 	return stats
 }
 
-// ClearAll 清空所有缓存
+// ClearAll 清空缓存
 func (cm *CacheManager) ClearAll() {
 	cm.GrpcDescriptorCache.Clear()
-	cm.HttpResponseCache.Clear()
-	cm.TemplateCache.Clear()
-	cm.LuaScriptCache.Clear()
-	slog.Info("All caches cleared")
+	slog.Info("gRPC descriptor cache cleared")
 }

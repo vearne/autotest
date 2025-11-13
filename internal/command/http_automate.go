@@ -22,13 +22,13 @@ import (
 	"time"
 )
 
-func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
+func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedTestResults {
 	total := 0
 	for _, testcases := range httpTestCases {
 		total += len(testcases)
 	}
 	if total <= 0 {
-		return
+		return &UnifiedTestResults{}
 	}
 
 	begin := time.Now()
@@ -39,6 +39,8 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 	finishCount := 0
 	successCount := 0
 	failedCount := 0
+	var failedCases []string
+	
 	for filePath := range httpTestCases {
 		// if ignore_testcase_fail is false and some testcases have failed.
 		if resource.TerminationFlag.Load() {
@@ -49,12 +51,27 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) {
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
+		
+		// 收集失败用例信息
+		for _, tcResult := range tcResultList {
+			if tcResult.State != model.StateSuccessFul {
+				failedCases = append(failedCases, fmt.Sprintf("HTTP_%d: %s", tcResult.ID, tcResult.Desc))
+			}
+		}
+		
 		slog.Info("HttpTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
-		// generate report file
+		// generate report file (保留旧的报告生成作为备份)
 		GenReportFileHttp(filePath, tcResultList, info)
 	}
 	slog.Info("[end]HttpTestCases, total:%v, cost:%v", total, time.Since(begin))
+	
+	return &UnifiedTestResults{
+		TotalTests:  finishCount,
+		PassedTests: successCount,
+		FailedTests: failedCount,
+		FailedCases: failedCases,
+	}
 }
 
 func GenReportFileHttp(testCasefilePath string, tcResultList []HttpTestCaseResult, info *ResultInfo) {

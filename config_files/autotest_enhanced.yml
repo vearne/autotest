@@ -5,31 +5,26 @@ global:
   debug: false
   request_timeout: 5s
   
-  # 新增：重试配置
+  # 重试机制：提升测试稳定性（已内置默认值，可自定义）
   retry:
-    max_attempts: 3
-    retry_delay: 1s
-    retry_on_status_codes: [500, 502, 503, 504]
+    max_attempts: 3                        # 自定义：最大重试次数（默认3次）
+    retry_delay: 1s                        # 自定义：重试间隔（默认1秒）
+    retry_on_status_codes: [500, 502, 503, 504]  # 自定义：HTTP重试状态码（默认包含408,429）
   
-  # 新增：并发控制
+  # 高级配置：并发控制（自定义并发限制）
   concurrency:
-    max_concurrent_requests: 10
-    rate_limit_per_second: 100
+    max_concurrent_requests: 10  # 自定义：最大并发请求数（默认20）
+    rate_limit_per_second: 100   # 自定义：每秒请求数限制（默认50）
   
-  # 新增：缓存配置
+  # 高级配置：缓存优化（自定义缓存参数）
   cache:
-    enabled: true
-    ttl: 300s
-    max_size: 1000
+    enabled: true          # 自定义：显式开启（默认已开启）
+    ttl: 300s              # 自定义：缓存过期时间（默认5分钟）
+    max_size: 100          # 自定义：缓存条目数（默认100个）
   
   logger:
     level: "debug"
     file_path: "/var/log/test/autotest.log"
-    # 新增：日志轮转
-    rotation:
-      max_size: 100MB
-      max_age: 7d
-      max_backups: 10
       
   report:
     dir_path: "/var/log/test/report/"

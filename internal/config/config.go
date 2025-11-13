@@ -36,12 +36,6 @@ type AutoTestConfig struct {
 		Logger struct {
 			Level    string `yaml:"level"`
 			FilePath string `yaml:"file_path"`
-			// 日志轮转
-			Rotation struct {
-				MaxSize    string `yaml:"max_size"`
-				MaxAge     string `yaml:"max_age"`
-				MaxBackups int    `yaml:"max_backups"`
-			} `yaml:"rotation"`
 		} `yaml:"logger"`
 
 		Report struct {

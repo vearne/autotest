@@ -31,10 +31,15 @@ var EnvVars map[string]string
 var CustomerVars sync.Map
 
 var RestyClient *resty.Client
+var RetryClient *util.RetryableHTTPClient
 var TerminationFlag atomic.Bool
 
 var DescSourceCache *model.DescSourceCache
 var CacheManager *util.CacheManager
+var RateLimiter *util.RateLimiter
+var EnvironmentManager *util.EnvironmentManager
+var ReportGenerator *util.ReportGenerator
+var NotificationService *util.NotificationService
 
 var SingleFlightGroup singleflight.Group
 
@@ -52,6 +57,71 @@ func InitCacheManager() {
 	slog.Info("Cache manager initialized")
 }
 
+// InitRateLimiter 初始化并发控制器
+func InitRateLimiter() {
+	// 设置合理的默认值
+	maxConcurrent := 20 // 默认允许20个并发请求
+	rateLimit := 50     // 默认每秒50个请求
+
+	// 如果用户配置了，使用用户的配置
+	if GlobalConfig.Global.Concurrency.MaxConcurrentRequests > 0 {
+		maxConcurrent = GlobalConfig.Global.Concurrency.MaxConcurrentRequests
+	}
+	if GlobalConfig.Global.Concurrency.RateLimitPerSecond > 0 {
+		rateLimit = GlobalConfig.Global.Concurrency.RateLimitPerSecond
+	}
+
+	RateLimiter = util.NewRateLimiter(maxConcurrent, rateLimit)
+	slog.Info("Rate limiter initialized: MaxConcurrent=%d, RateLimit=%d/s", maxConcurrent, rateLimit)
+}
+
+// InitEnvironmentManager 初始化环境管理器
+func InitEnvironmentManager() {
+	EnvironmentManager = util.NewEnvironmentManager(GlobalConfig)
+	slog.Info("Environment manager initialized")
+}
+
+// LoadEnvironment 加载指定环境的配置
+func LoadEnvironment(envName string) error {
+	if EnvironmentManager == nil {
+		return fmt.Errorf("environment manager not initialized")
+	}
+
+	// 显示可用环境列表（用于调试和用户友好提示）
+	availableEnvs := EnvironmentManager.ListAvailableEnvironments()
+	if len(availableEnvs) > 0 {
+		slog.Debug("Available environments: %v", availableEnvs)
+	}
+
+	if envName == "" {
+		if len(availableEnvs) > 0 {
+			slog.Info("No environment specified, using default configuration. Available environments: %v", availableEnvs)
+		} else {
+			slog.Info("No environment specified, using default configuration")
+		}
+		return nil
+	}
+
+	// 验证环境是否存在
+	if err := EnvironmentManager.ValidateEnvironment(envName); err != nil {
+		return fmt.Errorf("%w. Available environments: %v", err, availableEnvs)
+	}
+
+	// 加载环境配置
+	if err := EnvironmentManager.LoadEnvironment(envName); err != nil {
+		return fmt.Errorf("failed to load environment '%s': %w", envName, err)
+	}
+
+	// 将环境变量合并到全局 EnvVars 中
+	envVars := EnvironmentManager.GetAllVars()
+	for key, value := range envVars {
+		EnvVars[key] = value
+	}
+
+	slog.Info("Environment '%s' loaded successfully with %d variables", envName, len(envVars))
+	return nil
+}
+
 func InitRestyClient(debug bool) {
 	httpClient := http.Client{
 		Transport: &http.Transport{
@@ -60,6 +130,49 @@ func InitRestyClient(debug bool) {
 	}
 	RestyClient = resty.NewWithClient(&httpClient)
 	RestyClient.SetDebug(debug)
+}
+
+// InitRetryClient 初始化带重试功能的HTTP客户端
+func InitRetryClient() {
+	// 设置重试机制的默认值
+	if GlobalConfig.Global.Retry.MaxAttempts <= 0 {
+		GlobalConfig.Global.Retry.MaxAttempts = 3 // 默认最多重试3次
+	}
+	if GlobalConfig.Global.Retry.RetryDelay <= 0 {
+		GlobalConfig.Global.Retry.RetryDelay = time.Second // 默认重试间隔1秒
+	}
+	if len(GlobalConfig.Global.Retry.RetryOnStatusCodes) == 0 {
+		// 默认重试的状态码：服务器错误、网关错误、服务不可用、网关超时、请求超时、请求过多
+		GlobalConfig.Global.Retry.RetryOnStatusCodes = []int{500, 502, 503, 504, 408, 429}
+	}
+
+	RetryClient = util.NewRetryableHTTPClient(RestyClient, GlobalConfig)
+
+	slog.Info("RetryClient initialized: MaxAttempts=%d, RetryDelay=%v, RetryCodes=%v",
+		GlobalConfig.Global.Retry.MaxAttempts,
+		GlobalConfig.Global.Retry.RetryDelay,
+		GlobalConfig.Global.Retry.RetryOnStatusCodes)
+}
+
+// InitReportGenerator 初始化报告生成器
+func InitReportGenerator() {
+	ReportGenerator = util.NewReportGenerator(GlobalConfig)
+	slog.Info("ReportGenerator initialized")
+}
+
+// InitNotificationService 初始化通知服务
+func InitNotificationService() {
+	NotificationService = util.NewNotificationService(GlobalConfig)
+
+	if GlobalConfig.Global.Notifications.Enabled {
+		slog.Info("NotificationService initialized: Enabled=%v, WebhookURL=%s, OnFailure=%v, OnSuccess=%v",
+			GlobalConfig.Global.Notifications.Enabled,
+			GlobalConfig.Global.Notifications.WebhookURL,
+			GlobalConfig.Global.Notifications.OnFailure,
+			GlobalConfig.Global.Notifications.OnSuccess)
+	} else {
+		slog.Info("NotificationService initialized: Disabled")
+	}
 }
 
 func ParseConfigFile(filePath string) error {
