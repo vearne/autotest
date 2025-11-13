@@ -93,7 +93,7 @@ curl  'http://localhost:8080/api/books'
 
 ### 2) run automated test cases
 ```
-autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+autotest run -c=./config_files/autotest.yml --environment=dev
 ```
 
 ### 3) extract the value corresponding to xpath

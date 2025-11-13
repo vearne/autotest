@@ -90,7 +90,7 @@ curl  'http://localhost:8080/api/books'
 
 ### 2) 运行自动化测试用例
 ```
-autotest run -c=./config_files/autotest.yml -e=./config_files/.env.dev
+autotest run -c=./config_files/autotest.yml --environment=dev
 ```
 
 ### 3) 提取xpath对应的值
