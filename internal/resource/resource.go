@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/config"
+	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/autotest/internal/rule"
 	"github.com/vearne/autotest/internal/util"
@@ -172,6 +173,74 @@ func InitNotificationService() {
 	} else {
 		slog.Info("NotificationService initialized: Disabled")
 	}
+}
+
+// InitLuaVM 初始化Lua虚拟机并加载预加载文件
+func InitLuaVM() error {
+	if len(GlobalConfig.Global.Lua.PreloadFiles) == 0 {
+		slog.Info("No Lua preload files configured")
+		return nil
+	}
+
+	slog.Info("Initializing Lua VM with %d preload files", len(GlobalConfig.Global.Lua.PreloadFiles))
+
+	configDir := ""
+
+	if len(GlobalConfig.HttpRuleFiles) > 0 {
+		configDir = filepath.Dir(GlobalConfig.HttpRuleFiles[0])
+	} else if len(GlobalConfig.GrpcRuleFiles) > 0 {
+		configDir = filepath.Dir(GlobalConfig.GrpcRuleFiles[0])
+	}
+
+	absolutePaths := make([]string, 0, len(GlobalConfig.Global.Lua.PreloadFiles))
+	for _, file := range GlobalConfig.Global.Lua.PreloadFiles {
+		absPath := file
+		if !filepath.IsAbs(file) && configDir != "" {
+			absPath = filepath.Join(configDir, file)
+		}
+		absolutePaths = append(absolutePaths, absPath)
+
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			return fmt.Errorf("lua preload file not found: %s (resolved to %s)", file, absPath)
+		}
+	}
+
+	if err := luavm.LoadPreloadLuaFiles(absolutePaths); err != nil {
+		return fmt.Errorf("failed to load Lua preload files: %w", err)
+	}
+
+	slog.Info("Lua VM initialized successfully with %d preload files", len(absolutePaths))
+	return nil
+}
+
+// ValidateLuaFiles 验证Lua预加载文件
+func ValidateLuaFiles() error {
+	if len(GlobalConfig.Global.Lua.PreloadFiles) == 0 {
+		return nil
+	}
+
+	slog.Info("Validating %d Lua preload files", len(GlobalConfig.Global.Lua.PreloadFiles))
+
+	configDir := ""
+
+	if len(GlobalConfig.HttpRuleFiles) > 0 {
+		configDir = filepath.Dir(GlobalConfig.HttpRuleFiles[0])
+	} else if len(GlobalConfig.GrpcRuleFiles) > 0 {
+		configDir = filepath.Dir(GlobalConfig.GrpcRuleFiles[0])
+	}
+
+	for _, file := range GlobalConfig.Global.Lua.PreloadFiles {
+		absPath := file
+		if !filepath.IsAbs(file) && configDir != "" {
+			absPath = filepath.Join(configDir, file)
+		}
+
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			return fmt.Errorf("lua preload file not found: %s (resolved to %s)", file, absPath)
+		}
+	}
+
+	return nil
 }
 
 func ParseConfigFile(filePath string) error {
@@ -358,11 +427,9 @@ func ParseConfigFile(filePath string) error {
 	return nil
 }
 
-
 func readFile(filePath string) ([]byte, error) {
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, os.ErrNotExist
 	}
 	return os.ReadFile(filePath)
 }
-

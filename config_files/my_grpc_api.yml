@@ -175,3 +175,25 @@
           local title = "book4_title-" .. today235959;
           return body.data.title == title;
         end
+
+- id: 9
+  desc: "test using preloaded Lua functions"
+  request:
+    address: "{{ GRPC_SERVER }}"
+    symbol: "Bookstore/AddBook"
+    luaBody: |
+      function body()
+        local uuid = generateUUID()
+        local formattedTime = formatTimestamp(os.time())
+        local data = {
+          title   = "book_" .. uuid,
+          author  = "author_" .. formattedTime
+        };
+        return json.encode(data);
+      end
+  rules:
+    - name: "GrpcCodeEqualRule"
+      expected: "OK"
+    - name: "GrpcBodyEqualRule"
+      xpath: "/code"
+      expected: "Success"
