@@ -191,6 +191,52 @@ autotest run -c config.yml --environment=prod
 ```
 
 ## 9.Advanced Usage
+
+### Lua Preload Files
+You can preload Lua files to share common functions across test cases. These files will be loaded before running any test cases.
+
+Configuration example in your `autotest.yml`:
+```yaml
+global:
+  # Lua configuration
+  lua:
+    preload_files:
+      - "./config_files/lua/utils.lua"
+      - "./config_files/lua/helpers.lua"
+```
+
+Usage in a Lua file (`utils.lua`):
+```lua
+-- utils.lua
+local utils = {}
+
+function utils.trim(s)
+  return (s:gsub("^%s*(.-)%s*$", "%1"))
+end
+
+function utils.format_date()
+  return os.date("%Y-%m-%d")
+end
+
+return utils
+```
+
+Usage in test cases:
+```lua
+function body()
+  local utils = require "utils"
+  local today = utils.format_date()
+  -- use the preloaded functions
+  local data = {
+    date = today
+  }
+  return json.encode(data)
+end
+```
+
+**Note**: The `preload_files` paths can be relative or absolute. Relative paths are resolved relative to the config file location.
+
+### Lua Scripts in Test Cases
 In certain scenarios, we may need to use Lua scripts to generate the request body 
 or to verify whether the response body meets expectations
 ```

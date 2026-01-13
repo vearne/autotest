@@ -414,7 +414,19 @@ func ParseConfigFile(filePath string) error {
 		GlobalConfig.GrpcRuleFiles[idx] = absolutePath
 	}
 
-	// 3) modify report path
+	slog.Info("4) parse lua preload files")
+	for idx, f := range GlobalConfig.Global.Lua.PreloadFiles {
+		slog.Info("parse lua preload file:%v", f)
+		absolutePath, err := filepath.Abs(f)
+		if err != nil {
+			slog.Error("convert to absolute path failed, file:%v, error:%v", f, err)
+			return err
+		}
+		GlobalConfig.Global.Lua.PreloadFiles[idx] = absolutePath
+		slog.Info("lua preload file converted to absolute path:%v", absolutePath)
+	}
+
+	// 5) modify report path
 	newPath := filepath.Join(GlobalConfig.Global.Report.DirPath, "autotest_"+strconv.Itoa(int(time.Now().Unix())))
 	// 创建单个文件夹
 	err = os.Mkdir(newPath, 0755)

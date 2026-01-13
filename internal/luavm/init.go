@@ -194,9 +194,6 @@ func copyLuaValue(L *lua.LState, value lua.LValue) lua.LValue {
 
 // LoadPreloadLuaFiles 加载并验证Lua预加载文件
 func LoadPreloadLuaFiles(files []string) error {
-	preloadedFilesMutex.Lock()
-	defer preloadedFilesMutex.Unlock()
-
 	if len(files) == 0 {
 		slog.Info("No Lua preload files specified")
 		return nil
@@ -204,6 +201,8 @@ func LoadPreloadLuaFiles(files []string) error {
 
 	slog.Info("Loading %d Lua preload files", len(files))
 
+	// 先加载文件内容到临时map
+	tempLoadedFiles := make(map[string]string)
 	for _, file := range files {
 		content, err := os.ReadFile(file)
 		if err != nil {
@@ -217,14 +216,22 @@ func LoadPreloadLuaFiles(files []string) error {
 			return fmt.Errorf("syntax error in lua file %s: %w", file, err)
 		}
 
-		loadedLuaFiles[file] = string(content)
+		tempLoadedFiles[file] = string(content)
 		slog.Info("Loaded Lua file: %s", file)
 	}
 
-	// Track preloaded globals by executing in a temporary state
-	if err := trackPreloadedGlobalsFromFiles(files); err != nil {
+	// 跟踪预加载的全局变量（在加锁之前完成，避免死锁）
+	if err := trackPreloadedGlobalsFromFiles(tempLoadedFiles); err != nil {
 		return err
 	}
+	slog.Info("preloadedGlobals: %v", preloadedGlobals)
+
+	// 加锁并更新全局变量
+	preloadedFilesMutex.Lock()
+	for file, content := range tempLoadedFiles {
+		loadedLuaFiles[file] = content
+	}
+	preloadedFilesMutex.Unlock()
 
 	return nil
 }
@@ -243,8 +250,8 @@ func loadPreloadedFilesToState(L *lua.LState) error {
 }
 
 // trackPreloadedGlobalsFromFiles 跟踪预加载文件定义的全局变量
-func trackPreloadedGlobalsFromFiles(files []string) error {
-	if len(loadedLuaFiles) == 0 {
+func trackPreloadedGlobalsFromFiles(files map[string]string) error {
+	if len(files) == 0 {
 		return nil
 	}
 
@@ -253,9 +260,16 @@ func trackPreloadedGlobalsFromFiles(files []string) error {
 
 	luajson.Preload(L)
 
-	if err := loadPreloadedFilesToState(L); err != nil {
-		return err
+	// 直接使用传入的文件内容，不需要加锁
+	for _, content := range files {
+		if err := L.DoString(content); err != nil {
+			return fmt.Errorf("failed to load lua file content: %w", err)
+		}
 	}
+
+	// 加锁更新 preloadedGlobals
+	preloadedFilesMutex.Lock()
+	defer preloadedFilesMutex.Unlock()
 
 	global := L.GetGlobal("_G")
 	if tbl, ok := global.(*lua.LTable); ok {
@@ -263,7 +277,17 @@ func trackPreloadedGlobalsFromFiles(files []string) error {
 			if keyStr, ok := key.(lua.LString); ok {
 				keyName := string(keyStr)
 				if !isBuiltinGlobal(keyName) {
-					preloadedGlobals = append(preloadedGlobals, keyName)
+					// 检查是否已经存在，避免重复添加
+					exists := false
+					for _, existing := range preloadedGlobals {
+						if existing == keyName {
+							exists = true
+							break
+						}
+					}
+					if !exists {
+						preloadedGlobals = append(preloadedGlobals, keyName)
+					}
 				}
 			}
 		})
