@@ -19,7 +19,7 @@ func main() {
 	slog.SetLevel(slog.InfoLevel)
 
 	cli.VersionPrinter = func(cmd *cli.Command) {
-		fmt.Printf("version=%s\n", cmd.Root().Version)
+		fmt.Printf("version: %s\n", cmd.Root().Version)
 	}
 
 	cmd := &cli.Command{
