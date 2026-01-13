@@ -75,6 +75,15 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 		slog.Error("validate config file, error:%v", err)
 		return err
 	}
+
+	// 2.5. Initialize Lua VM with preloaded files
+	slog.Info("2.5. Initialize Lua VM")
+	err = resource.InitLuaVM()
+	if err != nil {
+		slog.Error("initialize Lua VM failed, error:%v", err)
+		return err
+	}
+
 	// 3. initialize logger & RestyClient & RetryClient & Cache & RateLimiter & EnvironmentManager & ReportGenerator & NotificationService
 	slog.Info("3. Initialize logger&RestyClient&RetryClient&Cache&RateLimiter&EnvironmentManager&ReportGenerator&NotificationService")
 	loggerConfig := resource.GlobalConfig.Global.Logger
@@ -135,6 +144,15 @@ func ValidateConfig(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	slog.Info("=== validate config file ===")
+
+	if len(resource.GlobalConfig.Global.Lua.PreloadFiles) > 0 {
+		slog.Info("Validating Lua preload files...")
+		if err := resource.ValidateLuaFiles(); err != nil {
+			slog.Error("Lua file validation failed: %v", err)
+			return err
+		}
+	}
+
 	return AllCheck()
 }
 

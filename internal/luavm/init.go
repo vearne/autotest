@@ -1,14 +1,23 @@
 package luavm
 
 import (
+	"fmt"
+	"os"
 	"sync"
 
+	slog "github.com/vearne/simplelog"
 	lua "github.com/yuin/gopher-lua"
 	luajson "layeh.com/gopher-json"
 )
 
 // 定义一个函数类型，用于作为参数传递
 type RegisterType func(L *lua.LState)
+
+var (
+	loadedLuaFiles      = make(map[string]string)
+	preloadedGlobals    []string
+	preloadedFilesMutex sync.RWMutex
+)
 
 // LuaVMPool Lua虚拟机池，避免全局锁竞争
 type LuaVMPool struct {
@@ -20,6 +29,13 @@ var GlobalLuaVMPool = &LuaVMPool{
 		New: func() interface{} {
 			L := lua.NewState()
 			luajson.Preload(L)
+
+			if len(loadedLuaFiles) > 0 {
+				if err := loadPreloadedFilesToState(L); err != nil {
+					slog.Error("failed to load preloaded lua files: %v", err)
+				}
+			}
+
 			return L
 		},
 	},
@@ -51,8 +67,8 @@ func cleanupLuaState(L *lua.LState) {
 		tbl.ForEach(func(key, value lua.LValue) {
 			if keyStr, ok := key.(lua.LString); ok {
 				keyName := string(keyStr)
-				// 保留Lua内置的全局变量和函数
-				if !isBuiltinGlobal(keyName) {
+				// 保留Lua内置的全局变量和函数，以及预加载的全局变量
+				if !isBuiltinGlobal(keyName) && !isPreloadedGlobal(keyName) {
 					keysToRemove = append(keysToRemove, key)
 				}
 			}
@@ -82,6 +98,19 @@ func isBuiltinGlobal(name string) bool {
 		"utf8": true, "package": true, "json": true, // json是我们预加载的
 	}
 	return builtins[name]
+}
+
+// isPreloadedGlobal 检查是否为预加载的全局变量
+func isPreloadedGlobal(name string) bool {
+	preloadedFilesMutex.RLock()
+	defer preloadedFilesMutex.RUnlock()
+
+	for _, key := range preloadedGlobals {
+		if key == name {
+			return true
+		}
+	}
+	return false
 }
 
 // ExecuteLuaWithGlobalsPool 使用池化的Lua虚拟机执行脚本
@@ -161,4 +190,109 @@ func copyLuaValue(L *lua.LState, value lua.LValue) lua.LValue {
 		// 对于其他类型，返回字符串表示
 		return lua.LString(value.String())
 	}
+}
+
+// LoadPreloadLuaFiles 加载并验证Lua预加载文件
+func LoadPreloadLuaFiles(files []string) error {
+	if len(files) == 0 {
+		slog.Info("No Lua preload files specified")
+		return nil
+	}
+
+	slog.Info("Loading %d Lua preload files", len(files))
+
+	// 先加载文件内容到临时map
+	tempLoadedFiles := make(map[string]string)
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return fmt.Errorf("failed to read lua file %s: %w", file, err)
+		}
+
+		tempL := lua.NewState()
+		defer tempL.Close()
+
+		if err := tempL.DoString(string(content)); err != nil {
+			return fmt.Errorf("syntax error in lua file %s: %w", file, err)
+		}
+
+		tempLoadedFiles[file] = string(content)
+		slog.Info("Loaded Lua file: %s", file)
+	}
+
+	// 跟踪预加载的全局变量（在加锁之前完成，避免死锁）
+	if err := trackPreloadedGlobalsFromFiles(tempLoadedFiles); err != nil {
+		return err
+	}
+	slog.Info("preloadedGlobals: %v", preloadedGlobals)
+
+	// 加锁并更新全局变量
+	preloadedFilesMutex.Lock()
+	for file, content := range tempLoadedFiles {
+		loadedLuaFiles[file] = content
+	}
+	preloadedFilesMutex.Unlock()
+
+	return nil
+}
+
+// loadPreloadedFilesToState 将预加载的Lua文件加载到指定的Lua状态机
+func loadPreloadedFilesToState(L *lua.LState) error {
+	preloadedFilesMutex.RLock()
+	defer preloadedFilesMutex.RUnlock()
+
+	for file, content := range loadedLuaFiles {
+		if err := L.DoString(content); err != nil {
+			return fmt.Errorf("failed to load lua file %s: %w", file, err)
+		}
+	}
+	return nil
+}
+
+// trackPreloadedGlobalsFromFiles 跟踪预加载文件定义的全局变量
+func trackPreloadedGlobalsFromFiles(files map[string]string) error {
+	if len(files) == 0 {
+		return nil
+	}
+
+	L := lua.NewState()
+	defer L.Close()
+
+	luajson.Preload(L)
+
+	// 直接使用传入的文件内容，不需要加锁
+	for _, content := range files {
+		if err := L.DoString(content); err != nil {
+			return fmt.Errorf("failed to load lua file content: %w", err)
+		}
+	}
+
+	// 加锁更新 preloadedGlobals
+	preloadedFilesMutex.Lock()
+	defer preloadedFilesMutex.Unlock()
+
+	global := L.GetGlobal("_G")
+	if tbl, ok := global.(*lua.LTable); ok {
+		tbl.ForEach(func(key, _ lua.LValue) {
+			if keyStr, ok := key.(lua.LString); ok {
+				keyName := string(keyStr)
+				if !isBuiltinGlobal(keyName) {
+					// 检查是否已经存在，避免重复添加
+					exists := false
+					for _, existing := range preloadedGlobals {
+						if existing == keyName {
+							exists = true
+							break
+						}
+					}
+					if !exists {
+						preloadedGlobals = append(preloadedGlobals, keyName)
+					}
+				}
+			}
+		})
+	}
+
+	slog.Info("Tracked %d preloaded global variables", len(preloadedGlobals))
+	return nil
 }

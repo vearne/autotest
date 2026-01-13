@@ -121,3 +121,17 @@
           local title = "book4_title-" .. today235959;
           return book.title == title;
         end
+    #  测试预装载的lua文件是否生效
+    #  2026-01-13 11:30:00
+    - name: "HttpLuaRule"
+      lua: |
+        function verify(r)
+          local now = os.time();
+          local formatted = formatTimestamp(now);
+          local dateStr1 = os.date("%Y-%m-%d");
+          local dateStr2 = string.sub(formatted, 1, 10);
+          print("---1---", dateStr1);
+          print("---2---", dateStr2);
+          return dateStr1 == dateStr2;
+        end
+    

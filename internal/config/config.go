@@ -51,6 +51,10 @@ type AutoTestConfig struct {
 			OnFailure  bool   `yaml:"on_failure"`
 			OnSuccess  bool   `yaml:"on_success"`
 		} `yaml:"notifications"`
+
+		Lua struct {
+			PreloadFiles []string `yaml:"preload_files"`
+		} `yaml:"lua"`
 	} `yaml:"global"`
 
 	HttpRuleFiles []string                     `yaml:"http_rule_files"`
