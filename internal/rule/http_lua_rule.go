@@ -1,7 +1,10 @@
 package rule
 
 import (
+	"fmt"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/luavm"
@@ -94,6 +97,16 @@ return verify(r);
 `
 	value, err := luavm.ExecuteLuaWithGlobalsPool(registerHttpRespType, globals, source)
 	if err != nil {
+		// 1. print in the console
+		var b strings.Builder
+		fmt.Fprintln(&b, "================== HttpLuaRule-Verify ==================")
+		fmt.Fprintln(&b, "status\t:", resp.StatusCode())
+		fmt.Fprintln(&b, "body\t:", resp.String())
+		fmt.Fprintln(&b, "LuaStr\t:", r.LuaStr)
+		fmt.Fprintln(&b, "error\t:", err.Error())
+		os.Stderr.WriteString(b.String())
+
+		// 2. output in the log
 		zaplog.Error("HttpLuaRule-Verify",
 			zap.Int("status", resp.StatusCode()),
 			zap.String("body", resp.String()),
