@@ -245,6 +245,7 @@ func ValidateLuaFiles() error {
 
 func ParseConfigFile(filePath string) error {
 	slog.Info("[start]ParseConfigFile:%v", filePath)
+	var absolutePath string
 
 	b, err := readFile(filePath)
 	if err != nil {
@@ -332,7 +333,11 @@ func ParseConfigFile(filePath string) error {
 		}
 
 		slog.Info("parse file:%v, len(testcases):%v", f, len(testcases))
-		absolutePath, _ := filepath.Abs(f)
+		absolutePath, err = filepath.Abs(f)
+		if err != nil {
+			slog.Error("convert to absolute path failed, file:%v, error:%v", f, err)
+			return err
+		}
 		HttpTestCases[absolutePath] = testcases
 		GlobalConfig.HttpRuleFiles[idx] = absolutePath
 	}
@@ -409,7 +414,11 @@ func ParseConfigFile(filePath string) error {
 		}
 
 		slog.Info("parse file:%v, len(testcases):%v", f, len(testcases))
-		absolutePath, _ := filepath.Abs(f)
+		absolutePath, err = filepath.Abs(f)
+		if err != nil {
+			slog.Error("convert to absolute path failed, file:%v, error:%v", f, err)
+			return err
+		}
 		GrpcTestCases[absolutePath] = testcases
 		GlobalConfig.GrpcRuleFiles[idx] = absolutePath
 	}
@@ -417,7 +426,7 @@ func ParseConfigFile(filePath string) error {
 	slog.Info("4) parse lua preload files")
 	for idx, f := range GlobalConfig.Global.Lua.PreloadFiles {
 		slog.Info("parse lua preload file:%v", f)
-		absolutePath, err := filepath.Abs(f)
+		absolutePath, err = filepath.Abs(f)
 		if err != nil {
 			slog.Error("convert to absolute path failed, file:%v, error:%v", f, err)
 			return err
