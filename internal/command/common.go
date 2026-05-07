@@ -3,12 +3,13 @@ package command
 import (
 	"embed"
 	"fmt"
+	"strings"
+
 	"github.com/antchfx/jsonquery"
 	"github.com/flosch/pongo2/v6"
 	"github.com/spf13/cast"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/resource"
-	"strings"
 )
 
 //go:embed template/*.tpl

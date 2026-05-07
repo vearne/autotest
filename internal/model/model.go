@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/fullstorydev/grpcurl"
 	"sync"
+
+	"github.com/fullstorydev/grpcurl"
 )
 
 type State int

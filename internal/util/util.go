@@ -4,8 +4,9 @@ import (
 	"crypto/md5"
 	"encoding/csv"
 	"fmt"
-	slog "github.com/vearne/simplelog"
 	"os"
+
+	slog "github.com/vearne/simplelog"
 )
 
 func WriterCSV(path string, records [][]string) {

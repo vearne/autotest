@@ -1,10 +1,11 @@
 package rule
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vearne/autotest/internal/luavm"
 	lua "github.com/yuin/gopher-lua"
-	"testing"
 )
 
 func TestLua(t *testing.T) {

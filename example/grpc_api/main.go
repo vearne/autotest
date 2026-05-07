@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	pb "github.com/vearne/autotest/example/grpc_api/server"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"sync"
+
+	pb "github.com/vearne/autotest/example/grpc_api/server"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var books = []pb.Book{

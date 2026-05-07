@@ -1,9 +1,10 @@
 package rule
 
 import (
+	"strings"
+
 	"github.com/antchfx/jsonquery"
 	"github.com/go-resty/resty/v2"
-	"strings"
 )
 
 // 实现 VerifyRule

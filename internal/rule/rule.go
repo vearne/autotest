@@ -2,6 +2,7 @@ package rule
 
 import (
 	"fmt"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/vearne/autotest/internal/model"
 )

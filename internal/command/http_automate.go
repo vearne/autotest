@@ -4,6 +4,14 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"html/template"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/lianggaoqiang/progress"
 	"github.com/vearne/autotest/internal/config"
 	"github.com/vearne/autotest/internal/model"
@@ -13,13 +21,6 @@ import (
 	slog "github.com/vearne/simplelog"
 	"github.com/vearne/zaplog"
 	"go.uber.org/zap"
-	"html/template"
-	"os"
-	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedTestResults {
@@ -40,7 +41,7 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedT
 	successCount := 0
 	failedCount := 0
 	var failedCases []string
-	
+
 	for filePath := range httpTestCases {
 		// if ignore_testcase_fail is false and some testcases have failed.
 		if resource.TerminationFlag.Load() {
@@ -51,21 +52,21 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedT
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
-		
+
 		// 收集失败用例信息
 		for _, tcResult := range tcResultList {
 			if tcResult.State != model.StateSuccessFul {
 				failedCases = append(failedCases, fmt.Sprintf("HTTP_%d: %s", tcResult.ID, tcResult.Desc))
 			}
 		}
-		
+
 		slog.Info("HttpTestCases, total:%v, finishCount:%v, successCount:%v, failedCount:%v",
 			total, finishCount, successCount, failedCount)
 		// generate report file (保留旧的报告生成作为备份)
 		GenReportFileHttp(filePath, tcResultList, info)
 	}
 	slog.Info("[end]HttpTestCases, total:%v, cost:%v", total, time.Since(begin))
-	
+
 	return &UnifiedTestResults{
 		TotalTests:  finishCount,
 		PassedTests: successCount,

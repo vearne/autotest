@@ -4,7 +4,7 @@ import (
 	"github.com/vearne/autotest/internal/luavm"
 	"github.com/vearne/autotest/internal/model"
 	"github.com/vearne/zaplog"
-	"github.com/yuin/gopher-lua"
+	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 )
 

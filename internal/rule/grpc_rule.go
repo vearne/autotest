@@ -1,9 +1,10 @@
 package rule
 
 import (
+	"strings"
+
 	"github.com/antchfx/jsonquery"
 	"github.com/vearne/autotest/internal/model"
-	"strings"
 )
 
 // implement VerifyRule

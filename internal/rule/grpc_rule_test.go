@@ -1,9 +1,10 @@
 package rule
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/vearne/autotest/internal/model"
-	"testing"
 )
 
 func TestGrpcBodyAtLeastOneRule(t *testing.T) {
