@@ -57,7 +57,7 @@ func httpSerialFiles(workerNum int, httpTestCases map[string][]*config.TestCaseH
 			break
 		}
 
-		info, tcResultList := HandleSingleFileHttp(workerNum, filePath, &resource.CustomerVars)
+		info, tcResultList := HandleSingleFileHttp(workerNum, filePath, &resource.CustomerVars, true)
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
@@ -97,7 +97,7 @@ func httpParallelFiles(workerNum int, httpTestCases map[string][]*config.TestCas
 		go func(fp string) {
 			// 每个文件使用独立的 vars，避免并行时变量冲突
 			fileVars := &sync.Map{}
-			info, tcResultList := HandleSingleFileHttp(workerNum, fp, fileVars)
+			info, tcResultList := HandleSingleFileHttp(workerNum, fp, fileVars, false)
 			resultChan <- fileResult{filePath: fp, info: info, tcResultList: tcResultList}
 		}(filePath)
 	}
@@ -228,7 +228,7 @@ func pathExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func HandleSingleFileHttp(workerNum int, filePath string, vars *sync.Map) (*ResultInfo, []HttpTestCaseResult) {
+func HandleSingleFileHttp(workerNum int, filePath string, vars *sync.Map, showProgress bool) (*ResultInfo, []HttpTestCaseResult) {
 	workerNum = min(workerNum, 10)
 	testcases := resource.HttpTestCases[filePath]
 	slog.Info("[start]HandleSingleFileHttp, filePath:%v, len(testcase):%v", filePath, len(testcases))
@@ -253,17 +253,21 @@ func HandleSingleFileHttp(workerNum int, filePath string, vars *sync.Map) (*Resu
 		}
 	}()
 
-	p := progress.Start()
-	bar := progress.NewBar().Custom(
-		progress.BarSetting{
-			StartText:       "[",
-			EndText:         "]",
-			PassedText:      "-",
-			FirstPassedText: ">",
-			NotPassedText:   "=",
-		},
-	)
-	p.AddBar(bar)
+	var bar *progress.DefaultBar
+	var p *progress.Progress
+	if showProgress {
+		p = progress.Start()
+		bar = progress.NewBar().Custom(
+			progress.BarSetting{
+				StartText:       "[",
+				EndText:         "]",
+				PassedText:      "-",
+				FirstPassedText: ">",
+				NotPassedText:   "=",
+			},
+		)
+		p.AddBar(bar)
+	}
 
 	finishCount := 0
 	successCount := 0
@@ -313,10 +317,12 @@ func HandleSingleFileHttp(workerNum int, filePath string, vars *sync.Map) (*Resu
 		}
 
 		finishCount++
-		// process bar will override this line.
-		fmt.Println()
-		//nolint: errcheck
-		bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
+		if showProgress {
+			// process bar will override this line.
+			fmt.Println()
+			//nolint: errcheck
+			bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
+		}
 		if finishCount >= len(testcases) {
 			// finish all test cases
 			break

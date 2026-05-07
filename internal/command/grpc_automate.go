@@ -54,7 +54,7 @@ func grpcSerialFiles(workerNum int, grpcTestCases map[string][]*config.TestCaseG
 			break
 		}
 
-		info, tcResultList := HandleSingleFileGrpc(workerNum, filePath, &resource.CustomerVars)
+		info, tcResultList := HandleSingleFileGrpc(workerNum, filePath, &resource.CustomerVars, true)
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
@@ -94,7 +94,7 @@ func grpcParallelFiles(workerNum int, grpcTestCases map[string][]*config.TestCas
 		go func(fp string) {
 			// 每个文件使用独立的 vars，避免并行时变量冲突
 			fileVars := &sync.Map{}
-			info, tcResultList := HandleSingleFileGrpc(workerNum, fp, fileVars)
+			info, tcResultList := HandleSingleFileGrpc(workerNum, fp, fileVars, false)
 			resultChan <- fileResult{filePath: fp, info: info, tcResultList: tcResultList}
 		}(filePath)
 	}
@@ -131,7 +131,7 @@ func grpcParallelFiles(workerNum int, grpcTestCases map[string][]*config.TestCas
 	}
 }
 
-func HandleSingleFileGrpc(workerNum int, filePath string, vars *sync.Map) (*ResultInfo, []GrpcTestCaseResult) {
+func HandleSingleFileGrpc(workerNum int, filePath string, vars *sync.Map, showProgress bool) (*ResultInfo, []GrpcTestCaseResult) {
 	workerNum = min(workerNum, 10)
 	testcases := resource.GrpcTestCases[filePath]
 	slog.Info("[start]HandleSingleFileGrpc, filePath:%v, len(testcase):%v", filePath, len(testcases))
@@ -157,17 +157,21 @@ func HandleSingleFileGrpc(workerNum int, filePath string, vars *sync.Map) (*Resu
 		}
 	}()
 
-	p := progress.Start()
-	bar := progress.NewBar().Custom(
-		progress.BarSetting{
-			StartText:       "[",
-			EndText:         "]",
-			PassedText:      "-",
-			FirstPassedText: ">",
-			NotPassedText:   "=",
-		},
-	)
-	p.AddBar(bar)
+	var bar *progress.DefaultBar
+	var p *progress.Progress
+	if showProgress {
+		p = progress.Start()
+		bar = progress.NewBar().Custom(
+			progress.BarSetting{
+				StartText:       "[",
+				EndText:         "]",
+				PassedText:      "-",
+				FirstPassedText: ">",
+				NotPassedText:   "=",
+			},
+		)
+		p.AddBar(bar)
+	}
 
 	finishCount := 0
 	successCount := 0
@@ -212,10 +216,12 @@ func HandleSingleFileGrpc(workerNum int, filePath string, vars *sync.Map) (*Resu
 		}
 
 		finishCount++
-		// process bar will override this line.
-		fmt.Println()
-		//nolint: errcheck
-		bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
+		if showProgress {
+			// process bar will override this line.
+			fmt.Println()
+			//nolint: errcheck
+			bar.Percent(float64(finishCount) / float64(len(testcases)) * 100)
+		}
 		if finishCount >= len(testcases) {
 			// finish all test cases
 			break
