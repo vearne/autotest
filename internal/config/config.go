@@ -10,6 +10,7 @@ type AutoTestConfig struct {
 	Global struct {
 		WorkerNum          int           `yaml:"worker_num"`
 		IgnoreTestCaseFail bool          `yaml:"ignore_testcase_fail"`
+		ParallelFiles      bool          `yaml:"parallel_files"`
 		Debug              bool          `yaml:"debug"`
 		RequestTimeout     time.Duration `yaml:"request_timeout"`
 

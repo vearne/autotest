@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -93,6 +94,7 @@ func (t *HttpTestCaseResult) RespDetail() string {
 type HttpTestCallable struct {
 	testcase   *config.TestCaseHttp
 	stateGroup *model.StateGroup
+	vars       *sync.Map
 }
 
 func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
@@ -136,7 +138,7 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	// 3. render
 	zaplog.Debug("before render()", zap.Uint64("testCaseId", m.testcase.ID),
 		zap.Any("request", m.testcase.Request))
-	req, err := renderRequestHttp(m.testcase.Request)
+	req, err := renderRequestHttpWithVars(m.testcase.Request, m.vars)
 	tcResult.Request = req
 	zaplog.Debug("after render()", zap.Uint64("testCaseId", m.testcase.ID),
 		zap.Any("request", tcResult.Request))
@@ -237,17 +239,17 @@ func (m *HttpTestCallable) Call(ctx context.Context) *executor.GPResult {
 	return &r
 }
 
-func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
+func renderRequestHttpWithVars(req config.RequestHttp, vars *sync.Map) (config.RequestHttp, error) {
 	var err error
 	// url
-	req.URL, err = templateRender(req.URL)
+	req.URL, err = templateRenderWithVars(req.URL, vars)
 	if err != nil {
 		return req, err
 	}
 
 	// headers
 	for i := 0; i < len(req.Headers); i++ {
-		req.Headers[i], err = templateRender(req.Headers[i])
+		req.Headers[i], err = templateRenderWithVars(req.Headers[i], vars)
 		if err != nil {
 			return req, err
 		}
@@ -271,11 +273,15 @@ func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
 		}
 		req.Body = value.String()
 	} else {
-		req.Body, err = templateRender(req.Body)
+		req.Body, err = templateRenderWithVars(req.Body, vars)
 		if err != nil {
 			return req, err
 		}
 	}
 
 	return req, nil
+}
+
+func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
+	return renderRequestHttpWithVars(req, &resource.CustomerVars)
 }

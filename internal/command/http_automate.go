@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lianggaoqiang/progress"
@@ -36,7 +37,15 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedT
 	slog.Info("[start]HttpTestCases, total:%v", total)
 
 	workerNum := resource.GlobalConfig.Global.WorkerNum
+	parallelFiles := resource.GlobalConfig.Global.ParallelFiles
 
+	if parallelFiles {
+		return httpParallelFiles(workerNum, httpTestCases, total, begin)
+	}
+	return httpSerialFiles(workerNum, httpTestCases, total, begin)
+}
+
+func httpSerialFiles(workerNum int, httpTestCases map[string][]*config.TestCaseHttp, total int, begin time.Time) *UnifiedTestResults {
 	finishCount := 0
 	successCount := 0
 	failedCount := 0
@@ -48,7 +57,7 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedT
 			break
 		}
 
-		info, tcResultList := HandleSingleFileHttp(workerNum, filePath)
+		info, tcResultList := HandleSingleFileHttp(workerNum, filePath, &resource.CustomerVars)
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
@@ -66,6 +75,56 @@ func HttpAutomateTest(httpTestCases map[string][]*config.TestCaseHttp) *UnifiedT
 		GenReportFileHttp(filePath, tcResultList, info)
 	}
 	slog.Info("[end]HttpTestCases, total:%v, cost:%v", total, time.Since(begin))
+
+	return &UnifiedTestResults{
+		TotalTests:  finishCount,
+		PassedTests: successCount,
+		FailedTests: failedCount,
+		FailedCases: failedCases,
+	}
+}
+
+func httpParallelFiles(workerNum int, httpTestCases map[string][]*config.TestCaseHttp, total int, begin time.Time) *UnifiedTestResults {
+	type fileResult struct {
+		filePath     string
+		info         *ResultInfo
+		tcResultList []HttpTestCaseResult
+	}
+
+	resultChan := make(chan fileResult, len(httpTestCases))
+
+	for filePath := range httpTestCases {
+		go func(fp string) {
+			// 每个文件使用独立的 vars，避免并行时变量冲突
+			fileVars := &sync.Map{}
+			info, tcResultList := HandleSingleFileHttp(workerNum, fp, fileVars)
+			resultChan <- fileResult{filePath: fp, info: info, tcResultList: tcResultList}
+		}(filePath)
+	}
+
+	finishCount := 0
+	successCount := 0
+	failedCount := 0
+	var failedCases []string
+
+	for i := 0; i < len(httpTestCases); i++ {
+		result := <-resultChan
+		finishCount += result.info.Total
+		successCount += result.info.SuccessCount
+		failedCount += result.info.FailedCount
+
+		// 收集失败用例信息
+		for _, tcResult := range result.tcResultList {
+			if tcResult.State != model.StateSuccessFul {
+				failedCases = append(failedCases, fmt.Sprintf("HTTP_%d: %s", tcResult.ID, tcResult.Desc))
+			}
+		}
+
+		slog.Info("HttpTestCases[parallel], total:%v, finishCount:%v, successCount:%v, failedCount:%v",
+			total, finishCount, successCount, failedCount)
+		GenReportFileHttp(result.filePath, result.tcResultList, result.info)
+	}
+	slog.Info("[end]HttpTestCases[parallel], total:%v, cost:%v", total, time.Since(begin))
 
 	return &UnifiedTestResults{
 		TotalTests:  finishCount,
@@ -169,7 +228,7 @@ func pathExists(path string) bool {
 	return !os.IsNotExist(err)
 }
 
-func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTestCaseResult) {
+func HandleSingleFileHttp(workerNum int, filePath string, vars *sync.Map) (*ResultInfo, []HttpTestCaseResult) {
 	workerNum = min(workerNum, 10)
 	testcases := resource.HttpTestCases[filePath]
 	slog.Info("[start]HandleSingleFileHttp, filePath:%v, len(testcase):%v", filePath, len(testcases))
@@ -186,7 +245,7 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 	go func() {
 		for i := 0; i < len(testcases); i++ {
 			tc := testcases[i]
-			f, err := pool.Submit(&HttpTestCallable{testcase: tc, stateGroup: stateGroup})
+			f, err := pool.Submit(&HttpTestCallable{testcase: tc, stateGroup: stateGroup, vars: vars})
 			if err != nil {
 				zaplog.Error("pool.Submit", zap.Any("testcase", tc), zap.Error(err))
 			}
@@ -224,7 +283,7 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 		if tcResult.State == model.StateNotExecuted {
 			time.Sleep(200 * time.Millisecond)
 			// wait for a while
-			f, err := pool.Submit(&HttpTestCallable{testcase: tcResult.TestCase, stateGroup: stateGroup})
+			f, err := pool.Submit(&HttpTestCallable{testcase: tcResult.TestCase, stateGroup: stateGroup, vars: vars})
 			if err != nil {
 				zaplog.Error("pool.Submit", zap.Any("testcase", tcResult.TestCase), zap.Error(err))
 			} else {
@@ -250,7 +309,7 @@ func HandleSingleFileHttp(workerNum int, filePath string) (*ResultInfo, []HttpTe
 
 		// process the variables generated when testcase is run
 		for key, value := range tcResult.KeyValues {
-			resource.CustomerVars.Store(key, value)
+			vars.Store(key, value)
 		}
 
 		finishCount++

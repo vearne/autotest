@@ -12,6 +12,7 @@ import (
 	// ignore SA1019 we have to import this because it appears in exported API
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"   //nolint:staticcheck
@@ -76,6 +77,7 @@ func (t *GrpcTestCaseResult) RespDetail() string {
 type GrpcTestCallable struct {
 	testcase   *config.TestCaseGrpc
 	stateGroup *model.StateGroup
+	vars       *sync.Map
 }
 
 func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
@@ -126,7 +128,7 @@ func (m *GrpcTestCallable) Call(ctx context.Context) *executor.GPResult {
 	// 3. render
 	zaplog.Info("before render()", zap.Uint64("testCaseId", m.testcase.ID),
 		zap.Any("request", m.testcase.Request))
-	req, err = renderRequestGrpc(m.testcase.Request)
+	req, err = renderRequestGrpcWithVars(m.testcase.Request, m.vars)
 	tcResult.Request = req
 	zaplog.Info("after render()", zap.Uint64("testCaseId", m.testcase.ID),
 		zap.Any("request", tcResult.Request))
@@ -241,17 +243,17 @@ ERROR:
 	return &r
 }
 
-func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
+func renderRequestGrpcWithVars(req config.RequestGrpc, vars *sync.Map) (config.RequestGrpc, error) {
 	var err error
 	// address
-	req.Address, err = templateRender(req.Address)
+	req.Address, err = templateRenderWithVars(req.Address, vars)
 	if err != nil {
 		return req, err
 	}
 
 	// headers
 	for i := 0; i < len(req.Headers); i++ {
-		req.Headers[i], err = templateRender(req.Headers[i])
+		req.Headers[i], err = templateRenderWithVars(req.Headers[i], vars)
 		if err != nil {
 			return req, err
 		}
@@ -275,13 +277,17 @@ func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
 		}
 		req.Body = value.String()
 	} else {
-		req.Body, err = templateRender(req.Body)
+		req.Body, err = templateRenderWithVars(req.Body, vars)
 		if err != nil {
 			return req, err
 		}
 	}
 
 	return req, nil
+}
+
+func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
+	return renderRequestGrpcWithVars(req, &resource.CustomerVars)
 }
 
 func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.DescriptorSource, error) {

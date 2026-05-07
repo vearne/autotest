@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/antchfx/jsonquery"
 	"github.com/flosch/pongo2/v6"
@@ -29,7 +30,7 @@ type CaseShow struct {
 	Link        string
 }
 
-func templateRender(tplStr string) (string, error) {
+func templateRenderWithVars(tplStr string, vars *sync.Map) (string, error) {
 	// Compile the template first (i. e. creating the AST)
 	tpl, err := pongo2.FromString(tplStr)
 	if err != nil {
@@ -41,14 +42,20 @@ func templateRender(tplStr string) (string, error) {
 		kvs[key] = value
 	}
 
-	resource.CustomerVars.Range(func(key, value any) bool {
-		kvs[key.(string)] = value
-		return true
-	})
+	if vars != nil {
+		vars.Range(func(key, value any) bool {
+			kvs[key.(string)] = value
+			return true
+		})
+	}
 
 	// Now you can render the template with the given
 	// pongo2.Context how often you want to.
 	return tpl.Execute(pongo2.Context(kvs))
+}
+
+func templateRender(tplStr string) (string, error) {
+	return templateRenderWithVars(tplStr, &resource.CustomerVars)
 }
 
 func exportTo(jsonStr string, export *config.Export) (any, error) {

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lianggaoqiang/progress"
@@ -33,7 +34,15 @@ func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) *UnifiedT
 	slog.Info("[start]GrpcTestCases, total:%v", total)
 
 	workerNum := resource.GlobalConfig.Global.WorkerNum
+	parallelFiles := resource.GlobalConfig.Global.ParallelFiles
 
+	if parallelFiles {
+		return grpcParallelFiles(workerNum, grpcTestCases, total, begin)
+	}
+	return grpcSerialFiles(workerNum, grpcTestCases, total, begin)
+}
+
+func grpcSerialFiles(workerNum int, grpcTestCases map[string][]*config.TestCaseGrpc, total int, begin time.Time) *UnifiedTestResults {
 	finishCount := 0
 	successCount := 0
 	failedCount := 0
@@ -45,7 +54,7 @@ func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) *UnifiedT
 			break
 		}
 
-		info, tcResultList := HandleSingleFileGrpc(workerNum, filePath)
+		info, tcResultList := HandleSingleFileGrpc(workerNum, filePath, &resource.CustomerVars)
 		finishCount += info.Total
 		successCount += info.SuccessCount
 		failedCount += info.FailedCount
@@ -72,7 +81,57 @@ func GrpcAutomateTest(grpcTestCases map[string][]*config.TestCaseGrpc) *UnifiedT
 	}
 }
 
-func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTestCaseResult) {
+func grpcParallelFiles(workerNum int, grpcTestCases map[string][]*config.TestCaseGrpc, total int, begin time.Time) *UnifiedTestResults {
+	type fileResult struct {
+		filePath     string
+		info         *ResultInfo
+		tcResultList []GrpcTestCaseResult
+	}
+
+	resultChan := make(chan fileResult, len(grpcTestCases))
+
+	for filePath := range grpcTestCases {
+		go func(fp string) {
+			// 每个文件使用独立的 vars，避免并行时变量冲突
+			fileVars := &sync.Map{}
+			info, tcResultList := HandleSingleFileGrpc(workerNum, fp, fileVars)
+			resultChan <- fileResult{filePath: fp, info: info, tcResultList: tcResultList}
+		}(filePath)
+	}
+
+	finishCount := 0
+	successCount := 0
+	failedCount := 0
+	var failedCases []string
+
+	for i := 0; i < len(grpcTestCases); i++ {
+		result := <-resultChan
+		finishCount += result.info.Total
+		successCount += result.info.SuccessCount
+		failedCount += result.info.FailedCount
+
+		// 收集失败用例信息
+		for _, tcResult := range result.tcResultList {
+			if tcResult.State != model.StateSuccessFul {
+				failedCases = append(failedCases, fmt.Sprintf("GRPC_%d: %s", tcResult.ID, tcResult.Desc))
+			}
+		}
+
+		slog.Info("GrpcTestCases[parallel], total:%v, finishCount:%v, successCount:%v, failedCount:%v",
+			total, finishCount, successCount, failedCount)
+		GenReportFileGrpc(result.filePath, result.tcResultList, result.info)
+	}
+	slog.Info("[end]GrpcTestCases[parallel], total:%v, cost:%v", total, time.Since(begin))
+
+	return &UnifiedTestResults{
+		TotalTests:  finishCount,
+		PassedTests: successCount,
+		FailedTests: failedCount,
+		FailedCases: failedCases,
+	}
+}
+
+func HandleSingleFileGrpc(workerNum int, filePath string, vars *sync.Map) (*ResultInfo, []GrpcTestCaseResult) {
 	workerNum = min(workerNum, 10)
 	testcases := resource.GrpcTestCases[filePath]
 	slog.Info("[start]HandleSingleFileGrpc, filePath:%v, len(testcase):%v", filePath, len(testcases))
@@ -90,7 +149,7 @@ func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTe
 	go func() {
 		for i := 0; i < len(testcases); i++ {
 			tc := testcases[i]
-			f, err := pool.Submit(&GrpcTestCallable{testcase: tc, stateGroup: stateGroup})
+			f, err := pool.Submit(&GrpcTestCallable{testcase: tc, stateGroup: stateGroup, vars: vars})
 			if err != nil {
 				zaplog.Error("pool.Submit", zap.Any("testcase", tc), zap.Error(err))
 			}
@@ -123,7 +182,7 @@ func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTe
 		if tcResult.State == model.StateNotExecuted {
 			time.Sleep(200 * time.Millisecond)
 			// wait for a while
-			f, err := pool.Submit(&GrpcTestCallable{testcase: tcResult.TestCase, stateGroup: stateGroup})
+			f, err := pool.Submit(&GrpcTestCallable{testcase: tcResult.TestCase, stateGroup: stateGroup, vars: vars})
 			if err != nil {
 				zaplog.Error("pool.Submit", zap.Any("testcase", tcResult.TestCase), zap.Error(err))
 			} else {
@@ -149,7 +208,7 @@ func HandleSingleFileGrpc(workerNum int, filePath string) (*ResultInfo, []GrpcTe
 
 		// process the variables generated when testcase is run
 		for key, value := range tcResult.KeyValues {
-			resource.CustomerVars.Store(key, value)
+			vars.Store(key, value)
 		}
 
 		finishCount++
