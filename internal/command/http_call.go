@@ -48,15 +48,15 @@ type HttpTestCaseResult struct {
 
 func (t *HttpTestCaseResult) ReqDetail() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("%v %v\n", strings.ToUpper(t.Request.Method), t.Request.URL))
+	fmt.Fprintf(&builder, "%v %v\n", strings.ToUpper(t.Request.Method), t.Request.URL)
 	u, _ := url.Parse(t.Request.URL)
-	builder.WriteString(fmt.Sprintf("HOST: %v\n", u.Host))
+	fmt.Fprintf(&builder, "HOST: %v\n", u.Host)
 	builder.WriteString("HEADERS:\n")
 	for _, item := range t.Request.Headers {
-		builder.WriteString(fmt.Sprintf("%v\n", item))
+		fmt.Fprintf(&builder, "%v\n", item)
 	}
 	builder.WriteString("BODY:\n")
-	builder.WriteString(fmt.Sprintf("%v\n", t.Request.Body))
+	fmt.Fprintf(&builder, "%v\n", t.Request.Body)
 	return builder.String()
 }
 
@@ -81,13 +81,13 @@ func (t *HttpTestCaseResult) RespDetail() string {
 	}
 
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("STATUS: %v\n", t.Response.Status()))
+	fmt.Fprintf(&builder, "STATUS: %v\n", t.Response.Status())
 	builder.WriteString("HEADERS:\n")
 	for key, values := range t.Response.Header() {
-		builder.WriteString(fmt.Sprintf("%v: %v\n", key, strings.Join(values, ",")))
+		fmt.Fprintf(&builder, "%v: %v\n", key, strings.Join(values, ","))
 	}
 	builder.WriteString("BODY:\n")
-	builder.WriteString(fmt.Sprintf("%v\n", t.Response.String()))
+	fmt.Fprintf(&builder, "%v\n", t.Response.String())
 	return builder.String()
 }
 
@@ -282,6 +282,4 @@ func renderRequestHttpWithVars(req config.RequestHttp, vars *sync.Map) (config.R
 	return req, nil
 }
 
-func renderRequestHttp(req config.RequestHttp) (config.RequestHttp, error) {
-	return renderRequestHttpWithVars(req, &resource.CustomerVars)
-}
+

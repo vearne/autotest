@@ -54,10 +54,6 @@ func templateRenderWithVars(tplStr string, vars *sync.Map) (string, error) {
 	return tpl.Execute(pongo2.Context(kvs))
 }
 
-func templateRender(tplStr string) (string, error) {
-	return templateRenderWithVars(tplStr, &resource.CustomerVars)
-}
-
 func exportTo(jsonStr string, export *config.Export) (any, error) {
 	doc, err := jsonquery.Parse(strings.NewReader(jsonStr))
 	if err != nil {

@@ -46,14 +46,14 @@ type GrpcTestCaseResult struct {
 
 func (t *GrpcTestCaseResult) ReqDetail() string {
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("ADDRESS: %v\n", t.Request.Address))
-	builder.WriteString(fmt.Sprintf("SYMBOL: %v\n", t.Request.Symbol))
+	fmt.Fprintf(&builder, "ADDRESS: %v\n", t.Request.Address)
+	fmt.Fprintf(&builder, "SYMBOL: %v\n", t.Request.Symbol)
 	builder.WriteString("HEADERS:\n")
 	for _, item := range t.Request.Headers {
-		builder.WriteString(fmt.Sprintf("%v\n", item))
+		fmt.Fprintf(&builder, "%v\n", item)
 	}
 	builder.WriteString("BODY:\n")
-	builder.WriteString(fmt.Sprintf("%v\n", t.Request.Body))
+	fmt.Fprintf(&builder, "%v\n", t.Request.Body)
 	return builder.String()
 }
 
@@ -63,14 +63,14 @@ func (t *GrpcTestCaseResult) RespDetail() string {
 	}
 
 	var builder strings.Builder
-	builder.WriteString(fmt.Sprintf("GRPC.CODE: %v\n", t.Response.Code))
-	builder.WriteString(fmt.Sprintf("GRPC.MESSAGE %v\n", t.Response.Message))
+	fmt.Fprintf(&builder, "GRPC.CODE: %v\n", t.Response.Code)
+	fmt.Fprintf(&builder, "GRPC.MESSAGE %v\n", t.Response.Message)
 	builder.WriteString("HEADERS:\n")
 	for _, item := range t.Response.Headers {
-		builder.WriteString(fmt.Sprintf("%v\n", item))
+		fmt.Fprintf(&builder, "%v\n", item)
 	}
 	builder.WriteString("BODY:\n")
-	builder.WriteString(fmt.Sprintf("%v\n", t.Response.Body))
+	fmt.Fprintf(&builder, "%v\n", t.Response.Body)
 	return builder.String()
 }
 
@@ -286,9 +286,6 @@ func renderRequestGrpcWithVars(req config.RequestGrpc, vars *sync.Map) (config.R
 	return req, nil
 }
 
-func renderRequestGrpc(req config.RequestGrpc) (config.RequestGrpc, error) {
-	return renderRequestGrpcWithVars(req, &resource.CustomerVars)
-}
 
 func getDescSourceWitchCache(ctx context.Context, address string) (grpcurl.DescriptorSource, error) {
 	// 尝试从缓存获取
