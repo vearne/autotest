@@ -1,0 +1,249 @@
+# =============================================================================
+# autotest_example.yml - 完整配置参数示例
+# =============================================================================
+# 包含 autotest 所有可配置参数，每个参数均附注释说明。
+# 可根据实际需求裁剪此文件。
+# =============================================================================
+
+# ----- 全局配置 -----
+global:
+  # 并发 worker 数量，控制同时执行的测试用例数
+  worker_num: 5
+
+  # 忽略测试用例失败，true 则即使用例失败也继续执行后续用例
+  ignore_testcase_fail: true
+
+  # 并行加载不同文件中的测试用例（默认 false）
+  parallel_files: false
+
+  # 调试模式，开启后会输出更详细的日志
+  debug: false
+
+  # 单次请求超时时间（Go duration 格式，如 5s, 10s, 1m）
+  request_timeout: 5s
+
+  # ----- 重试配置 -----
+  retry:
+    # 最大重试次数
+    max_attempts: 3
+    # 每次重试间隔（Go duration 格式）
+    retry_delay: 1s
+    # 触发重试的 HTTP 状态码列表（默认包含 408, 429）
+    retry_on_status_codes: [500, 502, 503, 504]
+
+  # ----- 并发控制 -----
+  concurrency:
+    # 最大并发请求数（默认 20）
+    max_concurrent_requests: 20
+    # 每秒请求速率限制（默认 50）
+    rate_limit_per_second: 50
+
+  # ----- 缓存配置 -----
+  cache:
+    # 是否启用 gRPC descriptor 缓存（默认 true）
+    enabled: true
+    # 缓存过期时间（Go duration 格式，默认 5m）
+    ttl: 300s
+    # 最大缓存条目数（默认 100）
+    max_size: 100
+
+  # ----- 日志配置 -----
+  logger:
+    # 日志级别: "info" | "debug" | "error"
+    level: "info"
+    # 日志文件路径
+    file_path: "/var/log/test/autotest.log"
+
+  # ----- 报告配置 -----
+  report:
+    # 报告输出目录
+    dir_path: "/var/log/test/report/"
+    # 报告格式，可选值: "html" | "json" | "csv" | "junit"，可多选
+    formats: ["html", "json", "csv", "junit"]
+    # 自定义 HTML 报告模板路径（可选）
+    template_path: "./templates/report.html"
+
+  # ----- 通知配置 -----
+  notifications:
+    # 是否启用通知
+    enabled: false
+    # Webhook URL（如 Slack incoming webhook）
+    webhook_url: "https://hooks.slack.com/services/..."
+    # 测试失败时发送通知
+    on_failure: true
+    # 测试成功时发送通知
+    on_success: false
+
+  # ----- Lua 配置 -----
+  lua:
+    # 预加载的 Lua 文件列表（在所有测试用例执行前加载）
+    # 路径支持相对路径（相对于配置文件所在目录）和绝对路径
+    preload_files:
+      - "./config_files/lua/utils.lua"
+      - "./config_files/lua/helpers.lua"
+
+# ----- HTTP 测试用例文件 -----
+# 指定包含 HTTP 测试用例的 YAML 文件路径
+http_rule_files:
+  - "./config_files/my_http_api.yml"
+
+# ----- gRPC 测试用例文件 -----
+# 指定包含 gRPC 测试用例的 YAML 文件路径
+grpc_rule_files:
+  - "./config_files/my_grpc_api.yml"
+
+# ----- 环境变量 -----
+# 多环境配置，通过 --environment 参数切换（如 --environment=dev）
+environments:
+  dev:
+    HOST: "localhost:8080"
+    GRPC_SERVER: "localhost:50031"
+  staging:
+    HOST: "staging.example.com"
+    GRPC_SERVER: "staging.example.com:50031"
+  prod:
+    HOST: "api.example.com"
+    GRPC_SERVER: "grpc.example.com:50031"
+
+# =============================================================================
+# HTTP 测试用例文件示例 (my_http_api.yml)
+# =============================================================================
+#
+# 每个用例包含以下字段:
+#
+# - id:             测试用例唯一标识（uint64）
+# - desc:           测试用例描述
+# - delay:          执行前延迟时间，可选（Go duration 格式，如 5s）
+# - dependOnIDs:    依赖的用例 ID 列表，可选（依赖的用例会先执行）
+# - request:        请求配置
+# - rules:          验证规则列表
+# - export:         变量导出配置，可选
+#
+# request 字段:
+#   method:  HTTP 方法（可选，默认 get）
+#   url:     请求 URL，支持 {{ 变量名 }} 占位符
+#   headers: 请求头列表，格式: "Key: Value"
+#   body:    请求体（JSON 字符串）
+#   luaBody: Lua 脚本生成请求体（与 body 二选一）
+#
+# rules 可用规则:
+#   - name: "HttpStatusEqualRule"       验证 HTTP 状态码
+#     expected: 200                     期望的状态码（int）
+#
+#   - name: "HttpBodyEqualRule"         验证响应体中某个字段等于期望值
+#     xpath: "/field"                   字段路径（XPath 语法）
+#     expected: "value"                 期望值
+#
+#   - name: "HttpBodyAtLeastOneRule"    验证响应体中至少有一个匹配元素
+#     xpath: "//items/name"             字段路径（XPath 语法）
+#     expected: "value"                 期望值
+#
+#   - name: "HttpLuaRule"               使用 Lua 脚本自定义验证逻辑
+#     lua: |
+#       function verify(r)
+#         -- r:code() 获取状态码, r:body() 获取响应体
+#         local json = require "json"
+#         local body = json.decode(r:body())
+#         return body.field == "expected_value"
+#       end
+#
+# export 字段（可选）:
+#   xpath:    要提取的响应字段路径（XPath 语法）
+#   exportTo: 导出到变量名
+#   type:     变量类型，可选值: "string"（默认）| "integer" | "float"
+#
+# HTTP 用例示例:
+# - id: 1
+#   desc: "create a resource"
+#   delay: 0s
+#   dependOnIDs: []
+#   request:
+#     method: "post"
+#     url: "http://{{ HOST }}/api/books"
+#     headers:
+#       - "Content-Type: application/json"
+#     body: |
+#       {"title": "book_title", "author": "book_author"}
+#   rules:
+#     - name: "HttpStatusEqualRule"
+#       expected: 200
+#     - name: "HttpBodyEqualRule"
+#       xpath: "/title"
+#       expected: "book_title"
+#   export:
+#     xpath: "/id"
+#     exportTo: "MY_BOOK_ID"
+#     type: integer
+
+# =============================================================================
+# gRPC 测试用例文件示例 (my_grpc_api.yml)
+# =============================================================================
+#
+# 每个用例包含以下字段:
+#
+# - id:             测试用例唯一标识（uint64）
+# - desc:           测试用例描述
+# - delay:          执行前延迟时间，可选（Go duration 格式，如 1s）
+# - dependOnIDs:    依赖的用例 ID 列表，可选
+# - request:        请求配置
+# - rules:          验证规则列表
+# - export:         变量导出配置，可选
+#
+# request 字段:
+#   address: gRPC 服务地址，支持 {{ 变量名 }} 占位符
+#   symbol:  gRPC 方法符号（格式: "ServiceName/MethodName"）
+#   headers: gRPC metadata 列表，格式: "Key: Value"
+#   body:    请求体（JSON 字符串）
+#   luaBody: Lua 脚本生成请求体（与 body 二选一）
+#
+# rules 可用规则:
+#   - name: "GrpcCodeEqualRule"        验证 gRPC 状态码
+#     expected: "OK"                   期望的状态码（string）
+#
+#   - name: "GrpcBodyEqualRule"        验证响应体中某个字段等于期望值
+#     xpath: "/code"                   字段路径（XPath 语法）
+#     expected: "Success"              期望值
+#
+#   - name: "GrpcBodyAtLeastOneRule"   验证响应体中至少有一个匹配元素
+#     xpath: "//title"                 字段路径（XPath 语法）
+#     expected: "value"                期望值
+#
+#   - name: "GrpcLuaRule"              使用 Lua 脚本自定义验证逻辑
+#     lua: |
+#       function verify(r)
+#         -- r:code() 获取状态码, r:body() 获取响应体
+#         local json = require "json"
+#         local body = json.decode(r:body())
+#         return body.data.field == "expected_value"
+#       end
+#
+# gRPC 用例示例:
+# - id: 1
+#   desc: "get a book"
+#   delay: 0s
+#   dependOnIDs: []
+#   request:
+#     address: "{{ GRPC_SERVER }}"
+#     symbol: "Bookstore/GetBook"
+#     headers:
+#       - "x-custom-header: value"
+#     body: |
+#       {"id": 1}
+#   rules:
+#     - name: "GrpcCodeEqualRule"
+#       expected: "OK"
+#     - name: "GrpcBodyEqualRule"
+#       xpath: "/data/title"
+#       expected: "The Go Programming Language"
+#   export:
+#     xpath: "/data/id"
+#     exportTo: "MY_BOOK_ID"
+#     type: integer
+
+# =============================================================================
+# 运行命令
+# =============================================================================
+# 验证配置文件: autotest test --config-file=./config_files/autotest_example.yml
+# 执行测试:     autotest run  --config-file=./config_files/autotest_example.yml --environment=dev
+# 提取 XPath:    autotest extract --xpath="//title" --json='[{"title": "test"}]'
+# =============================================================================
