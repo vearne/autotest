@@ -3,23 +3,51 @@ package luavm
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
+	slog "github.com/vearne/simplelog"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
+	luajson "layeh.com/gopher-json"
 )
 
+func resetPreloadedState() {
+	preloadedFilesMutex.Lock()
+	loadedLuaFiles = make(map[string]string)
+	preloadedGlobals = nil
+	preloadedFilesMutex.Unlock()
+
+	GlobalLuaVMPool = &LuaVMPool{
+		pool: sync.Pool{
+			New: func() interface{} {
+				L := lua.NewState()
+				luajson.Preload(L)
+
+				if len(loadedLuaFiles) > 0 {
+					if err := loadPreloadedFilesToState(L); err != nil {
+						slog.Error("failed to load preloaded lua files: %v", err)
+					}
+				}
+
+				return L
+			},
+		},
+	}
+}
+
 func TestLoadPreloadLuaFiles(t *testing.T) {
+	resetPreloadedState()
 	tmpDir := t.TempDir()
 
 	luaFile := filepath.Join(tmpDir, "utils.lua")
 	err := os.WriteFile(luaFile, []byte(`
-		function formatTimestamp(ts)
-			return "formatted"
+		function helperFuncA()
+			return "a"
 		end
 
-		function validateEmail(email)
-			return string.match(email, "[^@]+@[^@]+") ~= nil
+		function helperFuncB(v)
+			return string.match(v, "[^@]+@[^@]+") ~= nil
 		end
 	`), 0644)
 	assert.NoError(t, err)
@@ -31,6 +59,7 @@ func TestLoadPreloadLuaFiles(t *testing.T) {
 }
 
 func TestLoadPreloadLuaFiles_SyntaxError(t *testing.T) {
+	resetPreloadedState()
 	tmpDir := t.TempDir()
 
 	luaFile := filepath.Join(tmpDir, "invalid.lua")
@@ -53,11 +82,12 @@ func TestLoadPreloadLuaFiles_FileNotFound(t *testing.T) {
 }
 
 func TestIsPreloadedGlobal(t *testing.T) {
+	resetPreloadedState()
 	tmpDir := t.TempDir()
 
 	luaFile := filepath.Join(tmpDir, "utils.lua")
 	err := os.WriteFile(luaFile, []byte(`
-		function customFunc()
+		function preloadedCustomFunc()
 			return "hello"
 		end
 	`), 0644)
@@ -66,17 +96,18 @@ func TestIsPreloadedGlobal(t *testing.T) {
 	err = LoadPreloadLuaFiles([]string{luaFile})
 	assert.NoError(t, err)
 
-	assert.True(t, isPreloadedGlobal("customFunc"))
+	assert.True(t, isPreloadedGlobal("preloadedCustomFunc"))
 	assert.False(t, isPreloadedGlobal("nonExistent"))
 }
 
 func TestPreloadedGlobalsProtection(t *testing.T) {
+	resetPreloadedState()
 	tmpDir := t.TempDir()
 
 	luaFile := filepath.Join(tmpDir, "utils.lua")
 	err := os.WriteFile(luaFile, []byte(`
-		function formatTimestamp(ts)
-			return "formatted"
+		function protectedFunc(ts)
+			return "protected"
 		end
 	`), 0644)
 	assert.NoError(t, err)
@@ -94,7 +125,7 @@ func TestPreloadedGlobalsProtection(t *testing.T) {
 	L2 := GlobalLuaVMPool.GetLuaState()
 	defer GlobalLuaVMPool.PutLuaState(L2)
 
-	preloaded := L2.GetGlobal("formatTimestamp")
+	preloaded := L2.GetGlobal("protectedFunc")
 	assert.NotEqual(t, lua.LNil, preloaded)
 
 	temporary := L2.GetGlobal("temporaryGlobal")
@@ -102,6 +133,7 @@ func TestPreloadedGlobalsProtection(t *testing.T) {
 }
 
 func TestExecuteLuaWithPreloadedFunctions(t *testing.T) {
+	resetPreloadedState()
 	tmpDir := t.TempDir()
 
 	luaFile := filepath.Join(tmpDir, "utils.lua")
