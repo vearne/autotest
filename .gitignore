@@ -24,3 +24,4 @@ go.work
 vendor/
 example/http_api/vendor
 autotest
+.omo/
