@@ -53,7 +53,7 @@ func (t *GrpcTestCaseResult) ReqDetail() string {
 		fmt.Fprintf(&builder, "%v\n", item)
 	}
 	builder.WriteString("BODY:\n")
-	fmt.Fprintf(&builder, "%v\n", t.Request.Body)
+	fmt.Fprintf(&builder, "%v\n", util.PrettyJSON(t.Request.Body))
 	return builder.String()
 }
 
@@ -70,7 +70,7 @@ func (t *GrpcTestCaseResult) RespDetail() string {
 		fmt.Fprintf(&builder, "%v\n", item)
 	}
 	builder.WriteString("BODY:\n")
-	fmt.Fprintf(&builder, "%v\n", t.Response.Body)
+	fmt.Fprintf(&builder, "%v\n", util.PrettyJSON(t.Response.Body))
 	return builder.String()
 }
 

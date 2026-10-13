@@ -56,7 +56,7 @@ func (t *HttpTestCaseResult) ReqDetail() string {
 		fmt.Fprintf(&builder, "%v\n", item)
 	}
 	builder.WriteString("BODY:\n")
-	fmt.Fprintf(&builder, "%v\n", t.Request.Body)
+	fmt.Fprintf(&builder, "%v\n", util.PrettyJSON(t.Request.Body))
 	return builder.String()
 }
 
@@ -87,7 +87,7 @@ func (t *HttpTestCaseResult) RespDetail() string {
 		fmt.Fprintf(&builder, "%v: %v\n", key, strings.Join(values, ","))
 	}
 	builder.WriteString("BODY:\n")
-	fmt.Fprintf(&builder, "%v\n", t.Response.String())
+	fmt.Fprintf(&builder, "%v\n", util.PrettyJSON(t.Response.String()))
 	return builder.String()
 }
 
