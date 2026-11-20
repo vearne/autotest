@@ -88,7 +88,18 @@ func RunTestCases(ctx context.Context, cmd *cli.Command) error {
 	slog.Info("3. Initialize logger&RestyClient&RetryClient&Cache&RateLimiter&EnvironmentManager&ReportGenerator&NotificationService")
 	loggerConfig := resource.GlobalConfig.Global.Logger
 	slog.Info("loggerConfig:FilePath:%v, level:%v", loggerConfig.FilePath, loggerConfig.Level)
-	zaplog.InitLogger(loggerConfig.FilePath, loggerConfig.Level)
+	var loggerOpts []zaplog.Option
+	if loggerConfig.Level != "" {
+		loggerOpts = append(loggerOpts, zaplog.WithLevel(loggerConfig.Level))
+	}
+	if loggerConfig.FilePath != "" {
+		loggerOpts = append(loggerOpts, zaplog.WithFile(loggerConfig.FilePath))
+	}
+	err = zaplog.InitLogger(loggerOpts...)
+	if err != nil {
+		slog.Error("initialize logger failed, error:%v", err)
+		return err
+	}
 	resource.InitRestyClient(resource.GlobalConfig.Global.Debug)
 	resource.InitRetryClient()
 	resource.InitCacheManager()
