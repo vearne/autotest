@@ -25,3 +25,4 @@ vendor/
 example/http_api/vendor
 autotest
 .omo/
+graphify-out/
